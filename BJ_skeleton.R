@@ -20,7 +20,14 @@ hand_value <- function(vals) {
 }
 
 # 1) Pravila delivca (S17/H17) ---------------------------------------
-#is_soft <- function(vals){}
+is_soft <- function(vals) {
+  total <- sum(vals);
+  aces <- sum(vals == 11)
+  # znižuj ase iz 11 -> 1, dokler ne neha bustati
+  while (total > 21 && aces > 0) { total <- total - 10; aces <- aces - 1 }
+  # če je ostal vsaj en as, ki še šteje 11, je roka soft
+  aces > 0
+}
 
 #naprej nardim samo za H17...popa dodam S17
 #(shie = make_deck(n_decks), popa rabmo met in mind se delivcev hand, aka. up pa hole karti)
@@ -29,13 +36,13 @@ dealer_play <- function(shoe, up, hole, hit_soft_17 = FALSE) {
   i <- 1
   repeat {
     v <- hand_value(hand)
-    #soft <- is_soft(hand)
+    soft <- is_soft(hand)
     if (v > 21) break
     # S17: stoj na kateremkoli 17 (tudi soft)
     # H17: vleci pri soft 17, stoj pri hard 17
     if (v > 17) break
     if (v == 17 && !hit_soft_17) break
-    #if (v == 17 && hit_soft_17 && !soft) break
+    if (v == 17 && hit_soft_17 && !soft) break
     # sicer vleci in povecaj i za 1(da bo ready nasledna karta)
     hand <- c(hand, shoe$val[i]); i <- i + 1
   }
@@ -102,8 +109,20 @@ out <- replicate(10, simulate_hand(n_decks = 6, hit_soft_17 = FALSE))
 out
 table(out)
 
-set.seed(1)
+set.seed(121)
+out <- replicate(10, simulate_hand(n_decks = 6, hit_soft_17 = TRUE))
+out
+table(out)
+
+set.seed(1111111)
 out <- replicate(10, simulate_hand(n_decks = 6, hit_soft_17 = FALSE))
 out
 table(out)
+
+set.seed(1111111)
+out <- replicate(10, simulate_hand(n_decks = 6, hit_soft_17 = TRUE))
+out
+table(out)
 #___________________________________________________________________________
+
+# 5) Monte Carlo ------------------------------------------------------
