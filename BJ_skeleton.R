@@ -50,7 +50,7 @@ basic_action <- function(player_vals, dealer_up, can_double = TRUE, can_split = 
   v <- hand_value(player_vals)
   # zelo grob demo:
   if (v <= 11 && can_double) return("double")
-  if (v <= 16 && dealer_up$val >= 7) return("hit")  
+  if (v <= 16 && dealer_up >= 7) return("hit")  #omg dealer je ze tko al tko numeric po seb haha
   if (v >= 17) return("stand")
   "hit"
 }
@@ -95,5 +95,15 @@ simulate_hand <- function(n_decks = 6, hit_soft_17 = FALSE, bet = 1, payout_bj =
   res
 }
 
+#__________________________________________________________________________
+#test
+set.seed(121)
+out <- replicate(10, simulate_hand(n_decks = 6, hit_soft_17 = FALSE))
+out
+table(out)
 
-# 5) Monte Carlo ------------------------------------------------------
+set.seed(1)
+out <- replicate(10, simulate_hand(n_decks = 6, hit_soft_17 = FALSE))
+out
+table(out)
+#___________________________________________________________________________
