@@ -1,15 +1,16 @@
 # 0) Osnova: karte, vrednosti, vrednost roke -----------------------------
+#Za hrajenje n kupčkov kart
 make_deck <- function(n_decks = 6) {
   ranks <- c(2:10, "J","Q","K","A")
-  vals  <- c(2:10, rep(10,3), 11)          # A kot 11, kasneje prilagodimo
+  vals  <- c(2:10, rep(10,3), 11)
   deck  <- rep(ranks, each = 4 * n_decks)
   data.frame(rank = deck, 
              val  = rep(vals, each = 4 * n_decks),
              stringsAsFactors = FALSE)
 }
 
+#vrednost roke
 hand_value <- function(vals) {
-  # vals = vektor kartnih vrednosti z asi kot 11
   total <- sum(vals)
   aces  <- sum(vals == 11)
   while (total > 21 && aces > 0) {
@@ -19,23 +20,20 @@ hand_value <- function(vals) {
   total
 }
 
+#T/F ali roka soft
 is_soft <- function(vals) {
   total <- sum(vals);
   aces <- sum(vals == 11)
-  # znižuj ase iz 11 -> 1, dokler ne neha bustati
   while (total > 21 && aces > 0) { total <- total - 10; aces <- aces - 1 }
-  # če je ostal vsaj en as, ki še šteje 11, je roka soft
   aces > 0
 }
 
+#T/F ali imamo iz prve BJ (AS + value 10 karta)
 is_blackjack <- function(vals) {
   length(vals) == 2 && (11 %in% vals) && (10 %in% vals)
 }
 
 # 1) Pravila delivca (S17/H17) ---------------------------------------
-
-#naprej nardim samo za S17...popa dodam H17
-#(shoe = make_deck(n_decks), popa rabmo met in mind se delivcev hand, aka. up pa hole karti)
 dealer_play <- function(shoe, up, hole, hit_soft_17 = FALSE) {
   hand <- c(up, hole)
   i <- 1
@@ -48,23 +46,20 @@ dealer_play <- function(shoe, up, hole, hit_soft_17 = FALSE) {
     if (v > 17) break
     if (v == 17 && !hit_soft_17) break
     if (v == 17 && hit_soft_17 && !soft) break
-    # sicer vleci in povecaj i za 1(da bo ready nasledna karta)
     hand <- c(hand, shoe$val[i]); i <- i + 1
   }
   list(value = hand_value(hand), cards = hand, next_idx = i)
 }
 
 # 2) Osnovna strategija (poenostavljen lookup) --------------------------_
-# Tuki lahk pol dam CSV datoteko k je itk ze predetermined, na kere vrednosti + delaer card se hita i kaj ne(internet).
-#ampak najprj dejmo sam neki nahitr tok da bo delal, pa pol na tem buildam naprej, also s spilt se prolly nam zajebavu v osnovni strategiji
-#lets call it DEMO VERSION XD
+#DEMO VERSION: kasneje CSV datoteka za basic strategy, popa se advance strategy z Hi-Lo štetjem kart in bet spreadom
 basic_action <- function(player_vals, dealer_up, can_double = TRUE, can_split = FALSE) {
   v <- hand_value(player_vals)
   # zelo grob demo:
   if (v <= 11 && can_double) return("double")
-  if (v <= 16 && dealer_up >= 7) return("hit")  #omg dealer je ze tko al tko numeric po seb haha
+  if (v <= 16 && dealer_up >= 7) return("hit")
   if (v >= 17) return("stand")
-  "hit"
+  return("hit")
 }
 
 # 3) Igralčev potek roke (brez splitov, demo) ----------------------
@@ -103,8 +98,6 @@ play_player <- function(shoe, up_card, strategy = basic_action) {
 # 4) ENA IGRA (roka)
 #    - vključen blackjack check (3:2 ali 6:5 preko payout_bj)
 #    - upošteva double (2x stava)
-#!!! popravi realisticn vrstni red deljenja kart, zdj je 2 delaer 2 player, mogl bi bit pa igralc, dealer, igralc dealer
-#sj simpl, p1=shoe$val[1], up =shoe$val[2],.....
 # =========================================================
 
 #bj payout nastavmo na 3:2 (kksni casinoji majo sicer slabs 6:5...kasneje za metrike pa HE bomo mal spreminjal)
@@ -112,13 +105,10 @@ simulate_hand <- function(n_decks = 6, hit_soft_17 = FALSE, bet = 1, payout_bj =
   shoe <- make_deck(n_decks)
   shoe <- shoe[sample(nrow(shoe)),]  # premešamo
   
-  # deal dealer
-  up   <- shoe$val[1]
-  hole <- shoe$val[2]
-  idx <- 3
-  
-  # deal player (dve karti)
-  p1 <- shoe$val[idx]; p2 <- shoe$val[idx+1]; idx <- idx + 2
+  # po premešanju
+  p1 <- shoe$val[1];  up   <- shoe$val[2]
+  p2 <- shoe$val[3];  hole <- shoe$val[4]
+  idx <- 5
   player_start <- c(p1, p2)
   dealer_start <- c(up, hole)
   
