@@ -33,6 +33,48 @@ is_blackjack <- function(vals) {
   length(vals) == 2 && (11 %in% vals) && (10 %in% vals)
 }
 
+# =========================================================
+# A) SHOE: init, slice, advance, reshuffle (penetration)
+# =========================================================
+
+init_shoe <- function(n_decks = 6, penetration = 0.75) {
+  stopifnot(penetration > 0, penetration < 1) #pac penetrartion more bit v (0,1)
+  df <- make_deck(n_decks) #nardimo n deckov
+  df <- df[sample(nrow(df)), ] #nakljucno premesamo dek
+  total <- nrow(df) #skupno st kart
+  cut   <- floor(total * penetration) #pri kaksnem delezu porabljenih kart (penetrartion npr 75%) zelimo reshuffle
+  list(df = df, pos = 1L, total = total, cut = cut,
+       n_decks = n_decks, penetration = penetration) #vrnemo seznam
+}
+
+#vrnemo df s preostankom deka od trenutne pozicije dalje
+shoe_slice_df <- function(shoe) {
+  if (shoe$pos > shoe$total) return(shoe$df[0, , drop = FALSE])
+  shoe$df[shoe$pos:shoe$total, , drop = FALSE]
+}
+
+#premaknemoc kazalec "pos" za k kart naprej
+advance_shoe <- function(shoe, k) {
+  shoe$pos <- shoe$pos + k
+  shoe
+}
+
+#preveri ce smo ze presegl cut/penetration mejo (uporaba ce T reshuffle ce F pol pa nc ne nardi)
+maybe_reshuffle <- function(shoe) {
+  if (shoe$pos > shoe$cut) {
+    df <- make_deck(shoe$n_decks)
+    df <- df[sample(nrow(df)), ]
+    shoe$df <- df
+    shoe$total <- nrow(df)
+    shoe$pos <- 1L
+    shoe$cut <- floor(shoe$total * shoe$penetration)
+    shoe$reshuffled <- TRUE
+  } else {
+    shoe$reshuffled <- FALSE
+  }
+  shoe
+}
+
 # 1) Pravila delivca (S17/H17) ---------------------------------------
 dealer_play <- function(shoe, up, hole, hit_soft_17 = FALSE) {
   hand <- c(up, hole)
@@ -144,8 +186,82 @@ simulate_hand <- function(n_decks = 6, hit_soft_17 = FALSE, bet = 1, payout_bj =
   else 0
   res
 }
+
+# =========================================================
+# B) ENA IGRA IZ OBSTOJEČEGA SHOE (z BJ in double)
+# =========================================================
+deal_hand_from_shoe <- function(shoe, hit_soft_17 = FALSE, bet = 1, payout_bj = 1.5) {
+  # poskrbi za dovolj kart za začetno deljenje
+  slice <- shoe_slice_df(shoe)
+  if (nrow(slice) < 4) { shoe <- maybe_reshuffle(shoe); slice <- shoe_slice_df(shoe) }
+  
+  # casino vrstni red: P1, D_up, P2, D_hole
+  p1   <- slice$val[1];  up   <- slice$val[2]
+  p2   <- slice$val[3];  hole <- slice$val[4]
+  shoe <- advance_shoe(shoe, 4)
+  
+  player_start <- c(p1, p2)
+  dealer_start <- c(up, hole)
+  
+  # Blackjack check
+  if (is_blackjack(player_start) || is_blackjack(dealer_start)) {
+    if (is_blackjack(player_start) && is_blackjack(dealer_start)) return(list(gain = 0, shoe = shoe))
+    if (is_blackjack(player_start)) return(list(gain =  bet * payout_bj, shoe = shoe))
+    if (is_blackjack(dealer_start)) return(list(gain = -bet,            shoe = shoe))
+  }
+  
+  # Igralec odigra (iz trenutnega shoe)
+  slice <- shoe_slice_df(shoe)
+  pl <- play_player(  #pl$value (končna vsota), pl$cards (karte igralca),pl$doubled (TRUE/FALSE),pl$next_idx (koliko kart iz slice je porabil). )
+    shoe = slice,
+    up_card = up,
+    strategy = function(hand, upc, can_double = TRUE, ...) {
+      basic_action(hand, upc, can_double = (length(hand) == 2))
+    }
+  )
+  shoe <- advance_shoe(shoe, pl$next_idx - 1)
+  
+  # Če bust, takoj vrni
+  if (pl$value > 21) {
+    bet_mult <- if (isTRUE(pl$doubled)) 2 else 1
+    return(list(gain = -bet * bet_mult, shoe = shoe))
+  }
+  
+  # Delivec odigra (po S17/H17 pravilih) iz preostanka čevlja
+  slice <- shoe_slice_df(shoe)
+  dl <- dealer_play(slice, up = up, hole = hole, hit_soft_17 = hit_soft_17)
+  shoe <- advance_shoe(shoe, dl$next_idx - 1)
+  
+  # Rezultat (tuki vse isto kukr pr 1 normalni roki)
+  pv <- pl$value; dv <- dl$value
+  bet_mult <- if (isTRUE(pl$doubled)) 2 else 1
+  gain <- if (dv > 21)  bet * bet_mult
+  else if (pv > dv)  bet * bet_mult
+  else if (pv < dv) -bet * bet_mult
+  else 0
+  
+  list(gain = gain, shoe = shoe)
+}
+
+#kaj naredimo torej:
+#vzemi slice → če premau kart, reshuffle + spet slice
+
+#razdeli P1, D_up, P2, D_hole → advance_shoe(..., 4)
+
+#BJ check → mejbi return(...)
+
+#player igra iz slice → advance_shoe(..., pl$next_idx - 1)
+
+#če bust → return takoj
+
+#dealer igra iz slice → advance_shoe(..., dl$next_idx - 1)
+
+#primerjava in gain (+ bet_mult za double) → vrni list(gain, shoe)
+
+#OK zgleda ql :)
+
 # 5) Monte Carlo ------------------------------------------------------
-#(EV, SE, IZ)
+#(EV, SE, IZ, dobicki)
 
 simulate_n <- function(N = 1e5, ...) {
   gains <- numeric(N)
@@ -155,52 +271,63 @@ simulate_n <- function(N = 1e5, ...) {
   list(EV = mu, SE = se, CI95 = ci, gains = gains)
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+# =========================================================
+# C) MONTE CARLO preko istega SHOE (penetration + reshuffle)
+# =========================================================
+simulate_with_shoe <- function(N = 1e5,
+                               n_decks = 6,
+                               penetration = 0.75,
+                               hit_soft_17 = FALSE,
+                               bet = 1,
+                               payout_bj = 1.5) {
+  shoe <- init_shoe(n_decks = n_decks, penetration = penetration)
+  gains <- numeric(N)
+  
+  for (i in seq_len(N)) {
+    shoe <- maybe_reshuffle(shoe)  # preveri cut pred vsako roko
+    res <- deal_hand_from_shoe(shoe, hit_soft_17 = hit_soft_17, bet = bet, payout_bj = payout_bj)
+    gains[i] <- res$gain
+    shoe <- res$shoe
+  }
+  
+  mu <- mean(gains); s <- sd(gains); se <- s/sqrt(N)
+  ci <- c(mu - 1.96*se, mu + 1.96*se)
+  list(EV = mu, SE = se, CI95 = ci, gains = gains)
+}
 #__________________________________________________________________________
 
 #test
 set.seed(121)
-out <- replicate(10, simulate_hand(n_decks = 6, hit_soft_17 = FALSE))
+out <- replicate(1000, simulate_hand(n_decks = 6, hit_soft_17 = FALSE))
 out
 table(out)
 
 set.seed(121)
-out <- replicate(10, simulate_hand(n_decks = 6, hit_soft_17 = TRUE))
+out <- replicate(1000, simulate_hand(n_decks = 6, hit_soft_17 = TRUE))
 out
 table(out)
 
-set.seed(1111111)
-out <- replicate(10, simulate_hand(n_decks = 6, hit_soft_17 = FALSE))
-out
-table(out)
-
-set.seed(1111111)
-out <- replicate(10, simulate_hand(n_decks = 6, hit_soft_17 = TRUE))
-out
-table(out)
 #___________________________________________________________________________
+#Testi
 
-
-set.seed(123)
-res <- simulate_n(N = 100, n_decks = 6, hit_soft_17 = FALSE)
+set.seed(121)
+res <- simulate_n(N = 1000, n_decks = 6, hit_soft_17 = FALSE)
 res$EV      # ocenjen pričakovani dobiček na roko
 res$SE      # standardna napaka
 res$CI95    # 95% interval zaupanja za EV
 
-set.seed(123)
-res <- simulate_n(N = 100, n_decks = 6, hit_soft_17 = TRUE)
+set.seed(121)
+res <- simulate_n(N = 1000, n_decks = 6, hit_soft_17 = TRUE)
 res$EV      # ocenjen pričakovani dobiček na roko
 res$SE      # standardna napaka
 res$CI95    # 95% interval zaupanja za EV
+
+set.seed(2025)
+# 1 roka iz shoe
+S <- init_shoe(n_decks = 6, penetration = 0.75)
+h1 <- deal_hand_from_shoe(S, hit_soft_17 = FALSE); h1$gain; h1$shoe$pos
+
+# serija z reshuffle
+set.seed(2025)
+res <- simulate_with_shoe(N = 1000, n_decks = 6, penetration = 0.75, hit_soft_17 = FALSE)
+res$EV; res$CI95
