@@ -19,7 +19,6 @@ hand_value <- function(vals) {
   total
 }
 
-# 1) Pravila delivca (S17/H17) ---------------------------------------
 is_soft <- function(vals) {
   total <- sum(vals);
   aces <- sum(vals == 11)
@@ -29,8 +28,14 @@ is_soft <- function(vals) {
   aces > 0
 }
 
-#naprej nardim samo za H17...popa dodam S17
-#(shie = make_deck(n_decks), popa rabmo met in mind se delivcev hand, aka. up pa hole karti)
+is_blackjack <- function(vals) {
+  length(vals) == 2 && (11 %in% vals) && (10 %in% vals)
+}
+
+# 1) Pravila delivca (S17/H17) ---------------------------------------
+
+#naprej nardim samo za S17...popa dodam H17
+#(shoe = make_deck(n_decks), popa rabmo met in mind se delivcev hand, aka. up pa hole karti)
 dealer_play <- function(shoe, up, hole, hit_soft_17 = FALSE) {
   hand <- c(up, hole)
   i <- 1
@@ -67,30 +72,74 @@ play_player <- function(shoe, up_card, strategy = basic_action) {
   idx <- 1 #stevec naslednje karte v kupcku
   player <- c(shoe$val[idx], shoe$val[idx+1]); idx <- idx + 2 #damo mu 2 karti iz dekq
   action_hist <- c() #zgodovina potez
+  doubled <- FALSE
+  
   repeat {
-    a <- strategy(player, up_card) #strategija kle je pac una basic demo zaenkrat
+    a <- strategy(player, up_card, can_double = (length(player) == 2)) #strategija kle je pac una basic demo zaenkrat
     action_hist <- c(action_hist, a)
+    
     if (a == "stand") break
-    if (a == "double") { player <- c(player, shoe$val[idx]); idx <- idx + 1; break }
-    if (a == "hit")    { player <- c(player, shoe$val[idx]); idx <- idx + 1 }
+    
+    if (a == "double") { 
+      player <- c(player, shoe$val[idx]); idx <- idx + 1
+      doubled <- TRUE
+      break 
+    }
+    
+    if (a == "hit")    { player <- c(player, shoe$val[idx]); idx <- idx + 1 
+    
+      if (hand_value(player) > 21) break 
+    }
   }
-  list(value = hand_value(player), cards = player, next_idx = idx, actions = action_hist)
+  
+  list(value = hand_value(player),
+       cards = player,
+       next_idx = idx,
+       actions = action_hist,
+       doubled = doubled)
 }
 
-# 4) Simulacija ene roke ---------------------------------------
+# =========================================================
+# 4) ENA IGRA (roka)
+#    - vključen blackjack check (3:2 ali 6:5 preko payout_bj)
+#    - upošteva double (2x stava)
+#!!! popravi realisticn vrstni red deljenja kart, zdj je 2 delaer 2 player, mogl bi bit pa igralc, dealer, igralc dealer
+#sj simpl, p1=shoe$val[1], up =shoe$val[2],.....
+# =========================================================
+
 #bj payout nastavmo na 3:2 (kksni casinoji majo sicer slabs 6:5...kasneje za metrike pa HE bomo mal spreminjal)
 simulate_hand <- function(n_decks = 6, hit_soft_17 = FALSE, bet = 1, payout_bj = 1.5) {
   shoe <- make_deck(n_decks)
   shoe <- shoe[sample(nrow(shoe)),]  # premešamo
   
-  # deal
+  # deal dealer
   up   <- shoe$val[1]
   hole <- shoe$val[2]
   idx <- 3
   
+  # deal player (dve karti)
+  p1 <- shoe$val[idx]; p2 <- shoe$val[idx+1]; idx <- idx + 2
+  player_start <- c(p1, p2)
+  dealer_start <- c(up, hole)
+  
+  # blackjack check (pred igralčevimi potezami)
+  p_bj <- is_blackjack(player_start)
+  d_bj <- is_blackjack(dealer_start)
+  if (p_bj || d_bj) {
+    if (p_bj && d_bj) return(0)
+    if (p_bj && !d_bj) return(bet * payout_bj)  # npr. 1.5 za 3:2
+    if (!p_bj && d_bj) return(-bet)
+  }
+
   # player
-  pl <- play_player(shoe[idx:nrow(shoe), ], up)
+  pl <- play_player(shoe[idx:nrow(shoe), ], up_card = up, strategy = basic_action)
   idx <- idx + pl$next_idx - 1
+  
+  # Če je igralec bust
+  if (pl$value > 21) {
+    bet_mult <- if (isTRUE(pl$doubled)) 2 else 1
+    return(-bet * bet_mult)
+  }
   
   # dealer
   dl <- dealer_play(shoe[idx:nrow(shoe), ], up, hole, hit_soft_17)
@@ -98,7 +147,11 @@ simulate_hand <- function(n_decks = 6, hit_soft_17 = FALSE, bet = 1, payout_bj =
   
   # izid
   pv <- pl$value; dv <- dl$value
-  res <- if (pv > 21) -bet else if (dv > 21) bet else if (pv > dv) bet else if (pv < dv) -bet else 0
+  bet_mult <- if (isTRUE(pl$doubled)) 2 else 1
+  res <-  if (dv > 21) bet * bet_mult 
+  else if (pv > dv) bet * bet_mult
+  else if (pv < dv) -bet * bet_mult
+  else 0
   res
 }
 # 5) Monte Carlo ------------------------------------------------------
@@ -112,7 +165,21 @@ simulate_n <- function(N = 1e5, ...) {
   list(EV = mu, SE = se, CI95 = ci, gains = gains)
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
 #__________________________________________________________________________
+
 #test
 set.seed(121)
 out <- replicate(10, simulate_hand(n_decks = 6, hit_soft_17 = FALSE))
