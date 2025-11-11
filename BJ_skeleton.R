@@ -101,6 +101,16 @@ simulate_hand <- function(n_decks = 6, hit_soft_17 = FALSE, bet = 1, payout_bj =
   res <- if (pv > 21) -bet else if (dv > 21) bet else if (pv > dv) bet else if (pv < dv) -bet else 0
   res
 }
+# 5) Monte Carlo ------------------------------------------------------
+#(EV, SE, IZ)
+
+simulate_n <- function(N = 1e5, ...) {
+  gains <- numeric(N)
+  for (i in seq_len(N)) gains[i] <- simulate_hand(...)
+  mu <- mean(gains); s <- sd(gains); se <- s/sqrt(N)
+  ci <- c(mu - 1.96*se, mu + 1.96*se)
+  list(EV = mu, SE = se, CI95 = ci, gains = gains)
+}
 
 #__________________________________________________________________________
 #test
@@ -125,4 +135,15 @@ out
 table(out)
 #___________________________________________________________________________
 
-# 5) Monte Carlo ------------------------------------------------------
+
+set.seed(123)
+res <- simulate_n(N = 100, n_decks = 6, hit_soft_17 = FALSE)
+res$EV      # ocenjen pričakovani dobiček na roko
+res$SE      # standardna napaka
+res$CI95    # 95% interval zaupanja za EV
+
+set.seed(123)
+res <- simulate_n(N = 100, n_decks = 6, hit_soft_17 = TRUE)
+res$EV      # ocenjen pričakovani dobiček na roko
+res$SE      # standardna napaka
+res$CI95    # 95% interval zaupanja za EV
