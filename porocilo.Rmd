@@ -1,0 +1,110 @@
+---
+title: "porocilo"
+author: "Sebastjan Senk"
+date: "2025-11-06"
+output: html_document
+---
+
+# 1. Igra in pravila (na kratko)
+
+**Blackjack** je igra s kartami v kateri med seboj igrata igralec–delivec: cilj je biti bližje 21 toda ne več kot 21. Naravni 21 (A + 10/J/Q/K) ima posebno izplačilo.
+
+**Kompleti in vrednosti kart:** igra se s standardnim kompletom (pogosto več njih v *shoe*).\
+2–10 → vrednost = številka; J/Q/K → 10; A → 1 ali 11 (mehka roka, *soft*).
+
+**Potek:** 1) razdelitev dveh kart (delivčeva *upcard* je vidna),\
+2) morebiten naravni blackjack,\
+3) igralčeve poteze: *hit*, *stand*, *double*, *split*, *surrender* (če je dovoljeno),\
+4) delivec vleče do ≥17; pri **H17** vleče tudi na *soft 17*, pri **S17** ne,\
+5) primerjava (zmaga/poraz/*push*).
+
+**Parametri, ki jih spreminjamo v simulacijah:** število kompletov, H17/S17, izplačilo za BJ (3:2 ali 6:5), *surrender*, *DAS/RSA*, penetracija (delež odigranih kart pred mešanjem).
+
+**Metrike:** dobiček na stavo $G$, verjetnosti izidov (win/lose/push), volatilnost (aka. standardni odklon).\
+**House edge:** $\mathrm{HE}=-\mathbb{E}[G]$. Negativen $\mathbb{E}[G]$ pomeni prednost hiše.
+
+------------------------------------------------------------------------
+
+# 2. Strategije igranja
+
+## 2.1 Uvod in oznake
+
+Strategija določa, **kako igralec izbira poteze** na podlagi stanja igre. Stanje formalno:
+
+$$
+s = (V_P, V_D, S_P, P_P)
+$$
+
+kjer: - $V_P$ — vsota igralčevih kart (ase štejemo kot 1 ali 11),\
+- $V_D$ — delivčeva vidna karta (*upcard*),\
+- $S_P$ — indikator mehke roke (TRUE, če as šteje kot 11),\
+- $P_P$ — indikator para (možen *split*).
+
+Strategija je funkcija:
+
+$$
+\pi(s) = a, \quad a \in \{\text{hit}, \text{stand}, \text{double}, \text{split}, \text{surrender}\}.
+$$
+
+## 2.2 Vrste strategij
+
+| Tip strategije                     | Opis                                                                           | Namen                   |
+|------------------------|------------------------|------------------------|
+| **Naključna (se nism, ker bedna)** | Poteze brez logike.                                                            | Kontrolni primer.       |
+| **Osnovna (Basic)**                | Optimalna glede na pričakovani izid, brez štetja kart.                         | Standard v simulacijah. |
+| **Napredna**                       | Uporabi dodatne informacije (npr. štetje kart) za prilagoditev potez in stava. | Poveča dolgoročni $EV$. |
+
+V nadaljevanju uporabljamo **osnovno strategijo**.
+
+## 2.3 Matematični model odločanja
+
+Pričakovani dobiček poteze $a$ v stanju $s$:
+
+$$
+EV(s,a) = \sum_{s'} P(s' \mid s,a)\, R(s,a,s'),
+$$
+
+kjer je $P(\cdot)$ verjetnost prehoda, $R(\cdot)$ izplačilo. Optimalna poteza:
+
+$$
+\pi^*(s) = \arg\max_a EV(s,a).
+$$
+
+V praksi tabelo $\pi^*$ dobimo z DP ali simulacijo → **tabela osnovne strategije**.
+
+## 2.4 Osnovna strategija (izsek za hard roke, kasneje se soft in pari)
+
+Vir: <https://www.blackjackonlineigra.eu/article/tabela-za-osnovno-strategijo-igranja-blackjacka>
+
+Nastavitve: 6 kompletov, S17, brez *surrender*. Legenda: **H** = *Hit*, **S** = *Stand*, **D** = *Double* (če ne gre, *Hit*).
+
+| Igralčeva vsota |  2  |  3  |  4  |  5  |  6  |  7  |  8  |  9  | 10  |  A  |
+|----------------:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+|      8 ali manj |  H  |  H  |  H  |  H  |  H  |  H  |  H  |  H  |  H  |  H  |
+|               9 | H?  |  D  |  D  |  D  |  D  |  H  |  H  |  H  |  H  |  H  |
+|              10 |  D  |  D  |  D  |  D  |  D  |  D  |  D  |  D  |  H  |  H  |
+|              11 |  D  |  D  |  D  |  D  |  D  |  D  |  D  |  D  |  D  |  H  |
+|              12 |  H  |  H  |  S  |  S  |  S  |  H  |  H  |  H  |  H  |  H  |
+|           13–16 |  S  |  S  |  S  |  S  |  S  |  H  |  H  |  H  |  H  |  H  |
+|      17 ali več |  S  |  S  |  S  |  S  |  S  |  S  |  S  |  S  |  S  |  S  |
+
+(Opomba: ločeni tabeli obstajata za *soft* roke in *pare, "WiP"*.)
+
+## 2.5 Napredna strategija štetje kart (Hi–Lo) [STILL WiP]
+
+Točkovanje kart: 2–6 → +1, 7–9 → 0, 10/J/Q/K/A → −1.\
+Tekoči count $C$; **true count**:
+
+$$
+TC = \frac{C}{\text{decks remaining}}.
+$$
+
+Pri $TC>0$ ima igralec statistično prednost → poveča stavo; pri $TC<0$ stavi minimalno. (V tem projektu **ne optimiziramo** naprednih prilagoditev.)
+
+[WiP] **Po mojem bo prevec zahtevno da bi se dinamicno upravljanje stav implementiru, ampak u never know ;)**
+
+## 2.6 Povzetek
+
+-   Strategija je $\pi(s)$, ki maksimizira $EV(s,a)$.\
+-   V simulacijah uporabljamo **osnovno strategijo**; parametre pravil (H17/S17, izplačila, št. kompletov) spreminjamo.\
+-   Napredne metode (štetje kart) so izven obsega implementacije, a pomembne za kontekst.
