@@ -1,7 +1,7 @@
 ---
 title: "porocilo"
 author: "Sebastjan Senk"
-date: "2025-11-06"
+date: "2025"
 output: html_document
 ---
 
@@ -48,11 +48,11 @@ $$
 
 ## 2.2 Vrste strategij
 
-| Tip strategije                     | Opis                                                                           | Namen                   |
+| Tip strategije                                                           | Opis                                                                           | Namen                   |
 |------------------------|------------------------|------------------------|
-| **Naključna (se nism, ker bedna)** | Poteze brez logike.                                                            | Kontrolni primer.       |
-| **Osnovna (Basic)**                | Optimalna glede na pričakovani izid, brez štetja kart.                         | Standard v simulacijah. |
-| **Napredna**                       | Uporabi dodatne informacije (npr. štetje kart) za prilagoditev potez in stava. | Poveča dolgoročni $EV$. |
+| **Naključna (nej bo ta "demo" verzija nakljucna, osnovna bo pa tabela)** | Poteze brez logike.                                                            | Kontrolni primer.       |
+| **Osnovna (Basic)**                                                      | Optimalna glede na pričakovani izid, brez štetja kart.                         | Standard v simulacijah. |
+| **Napredna**                                                             | Uporabi dodatne informacije (npr. štetje kart) za prilagoditev potez in stava. | Poveča dolgoročni $EV$. |
 
 V nadaljevanju uporabljamo **osnovno strategijo**.
 
