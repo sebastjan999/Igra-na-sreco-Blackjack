@@ -44,6 +44,21 @@ hi_lo_delta <- function(vals) {
  #npr uporaba
 #running_count <- running_count + sum(hi_lo_delta(c(2,5,10,11)))
 
+# Bet spread glede na Hi-Lo true count (kle se lah tut mal igram pa se visje stave delam 12, 16,... bo kasneje k bom metrike zbirou mejbi zanimiv)
+bet_spread <- function(true_count) {
+  tc <- floor(true_count)  # delamo z zaokroženim navzdol
+  
+  if (tc <= 0) {
+    return(1)   # TC <= 0 : minimalna stava
+  } else if (tc == 1) {
+    return(2)   # TC = 1 : 2 enoti
+  } else if (tc == 2) {
+    return(4)   # TC = 2 : 4 enote
+  } else {
+    return(8)   # TC >= 3 : 8 enot
+  }
+}
+
 # =========================================================
 # A) SHOE: init, slice, advance, reshuffle (penetration)
 # =========================================================
@@ -473,7 +488,7 @@ simulate_with_shoe <- function(N = 1e5,
 }
 
 # =========================================================
-# C2) MONTE CARLO preko istega SHOE z Hi-Lo štetjem
+# C2) MONTE CARLO preko istega SHOE z Hi-Lo štetjem  !!!klele sam se bed spread notr utakni, da based on TC nardi bet, se mi ne da vec bom jutr
 # =========================================================
 simulate_with_shoe_hilo <- function(N = 1e5,
                                     n_decks = 6,
@@ -564,7 +579,8 @@ res <- simulate_with_shoe(N = 1000, n_decks = 6, penetration = 0.75, hit_soft_17
 res$EV; res$CI95
 
 #[1] -0.0125
-#[1] -0.08929421  0.06429421 ....okeeej najvecja bedaruija je bla, v deal_hand_from_shoe je razdelu karte, pol je bj check nardiu popa spet larte razdelu ce ni bj jao XD, odpravljena napaka :)
+#[1] -0.08929421  0.06429421 ....okeeej najvecja bedarija je bla, v deal_hand_from_shoe je razdelu karte, pol je bj check nardiu popa spet larte razdelu ce ni bj jao XD, odpravljena napaka :)
+#basicaly, mi smo razdelil, checknl bj pol pa odigral stari play_playwer, ki je razdelu karte in odigrau XD
 
 #Se z Hi-Lo *****
 set.seed(2025)
