@@ -46,7 +46,7 @@ hi_lo_delta <- function(vals) {
 
 # Bet spread glede na Hi-Lo true count (kle se lah tut mal igram pa se visje stave delam 12, 16,... bo kasneje k bom metrike zbirou mejbi zanimiv)
 bet_spread <- function(true_count) {
-  tc <- floor(true_count)  # delamo z zaokroženim navzdol
+  tc <- floor(true_count[1])  # delamo z zaokroženim navzdol---tc je vektor hah
   
   if (tc <= 0) {
     return(1)   # TC <= 0 : minimalna stava
@@ -488,7 +488,7 @@ simulate_with_shoe <- function(N = 1e5,
 }
 
 # =========================================================
-# C2) MONTE CARLO preko istega SHOE z Hi-Lo štetjem  !!!klele sam se bed spread notr utakni, da based on TC nardi bet, se mi ne da vec bom jutr
+# C2) MONTE CARLO preko istega SHOE z Hi-Lo štetjem  + bet spread
 # =========================================================
 simulate_with_shoe_hilo <- function(N = 1e5,
                                     n_decks = 6,
@@ -500,7 +500,7 @@ simulate_with_shoe_hilo <- function(N = 1e5,
   gains <- numeric(N)
   running_count <- integer(N)
   true_count    <- numeric(N)
-  
+  bet_s <- numeric(N)
   rc <- 0L
   
   for (i in seq_len(N)) {
@@ -514,11 +514,16 @@ simulate_with_shoe_hilo <- function(N = 1e5,
     true_count[i]   <- if (decks_remaining > 0) rc / decks_remaining else 0
     running_count[i] <- rc
     
+    # določi bet_i glede na tc (bet spread)
+    spread_mult <- bet_spread(true_count[i])   # 1, 2, 4, 8 ...
+    bet_i <- bet * spread_mult      # realna stava v tej roki
+    bet_s[i] <- bet_i
+    
     res <- deal_hand_from_shoe_hilo(
       shoe          = shoe,
       running_count = rc,
       hit_soft_17   = hit_soft_17,
-      bet           = bet,
+      bet           = bet_i,
       payout_bj     = payout_bj,
       verbose       = FALSE
     )
@@ -536,7 +541,8 @@ simulate_with_shoe_hilo <- function(N = 1e5,
     CI95 = ci,
     gains = gains,
     running_count = running_count,
-    true_count = true_count
+    true_count = true_count, print(true_count),
+    bet = bet_s, print(bet_s)
   )
 }
 
