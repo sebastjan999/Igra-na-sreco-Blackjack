@@ -33,6 +33,17 @@ is_blackjack <- function(vals) {
   length(vals) == 2 && (11 %in% vals) && (10 %in% vals)
 }
 
+# Hi-Lo štetje: 2-6 = +1, 7-9 = 0, 10/J/Q/K/A = -1
+hi_lo_delta <- function(vals) {
+  # vals = numeric vektor vrednosti kart (2-11)
+  out <- integer(length(vals))
+  out[vals >= 2 & vals <= 6] <- 1L
+  out[vals == 10 | vals == 11] <- -1L  # 10, J, Q, K, A
+  out
+}
+ #npr uporaba
+#running_count <- running_count + sum(hi_lo_delta(c(2,5,10,11)))
+
 # =========================================================
 # A) SHOE: init, slice, advance, reshuffle (penetration)
 # =========================================================
@@ -97,7 +108,7 @@ dealer_play <- function(shoe, up, hole, hit_soft_17 = FALSE) {
 #DEMO VERSION: kasneje CSV datoteka za basic strategy, popa se advance strategy z Hi-Lo štetjem kart in bet spreadom
 basic_action <- function(player_vals, dealer_up, can_double = TRUE, can_split = FALSE) {
   v <- hand_value(player_vals)
-  # zelo grob demo:
+  # zelo grob demo:  "Recimo temu nakljucna strategija"
   if (v <= 11 && can_double) return("double")
   if (v <= 16 && dealer_up >= 7) return("hit")
   if (v >= 17) return("stand")
@@ -134,6 +145,66 @@ play_player <- function(shoe, up_card, strategy = basic_action) {
        next_idx = idx,
        actions = action_hist,
        doubled = doubled)
+}
+
+
+# =========================================================
+# (DOD) Za Hi-Lo iz Shoe (+ verbose kr sm rabu mal za debuging, bo proly zbrisan pol k se 1x preverm ce res vse dela kukr bi moglo XD)
+# =========================================================
+# Igralec igra, če mu podamo že znano začetno roko (npr. iz shoe)
+play_player_from_hand <- function(start_hand, shoe, up_card,
+                                  strategy = basic_action,
+                                  verbose = FALSE) {
+  hand <- start_hand
+  idx  <- 1
+  action_hist <- character(0)
+  doubled <- FALSE
+  
+  if (verbose) {
+    cat(sprintf("PLAYER start: cards=%s (total=%d)\n",
+                paste(hand, collapse=","), hand_value(hand)))
+  }
+  
+  repeat {
+    a <- strategy(hand, up_card, can_double = (length(hand) == 2))
+    action_hist <- c(action_hist, a)
+    if (verbose) cat(sprintf(" -> action: %s\n", a))
+    
+    if (a == "stand") break
+    
+    if (a == "double") {
+      hand <- c(hand, shoe$val[idx]); idx <- idx + 1
+      doubled <- TRUE
+      if (verbose) {
+        cat(sprintf("    drew: %d   (total=%d) [DOUBLE]\n",
+                    tail(hand,1), hand_value(hand)))
+      }
+      break
+    }
+    
+    if (a == "hit") {
+      hand <- c(hand, shoe$val[idx]); idx <- idx + 1
+      if (verbose) {
+        cat(sprintf("    drew: %d   (total=%d)\n",
+                    tail(hand,1), hand_value(hand)))
+      }
+      if (hand_value(hand) > 21) break
+    }
+  }
+  
+  if (verbose) {
+    cat(sprintf("PLAYER final: cards=%s (total=%d) doubled=%s\n",
+                paste(hand, collapse=","), hand_value(hand),
+                ifelse(doubled,"TRUE","FALSE")))
+  }
+  
+  list(
+    value   = hand_value(hand),
+    cards   = hand,
+    next_idx = idx,
+    actions = action_hist,
+    doubled = doubled
+  )
 }
 
 # =========================================================
@@ -210,14 +281,14 @@ deal_hand_from_shoe <- function(shoe, hit_soft_17 = FALSE, bet = 1, payout_bj = 
     if (is_blackjack(dealer_start)) return(list(gain = -bet,            shoe = shoe))
   }
   
-  # Igralec odigra (iz trenutnega shoe)
+  # Igralec odigra (iz trenutnega shoe) #popravek 18.11 :)
   slice <- shoe_slice_df(shoe)
-  pl <- play_player(  #pl$value (končna vsota), pl$cards (karte igralca),pl$doubled (TRUE/FALSE),pl$next_idx (koliko kart iz slice je porabil). )
-    shoe = slice,
-    up_card = up,
-    strategy = function(hand, upc, can_double = TRUE, ...) {
-      basic_action(hand, upc, can_double = (length(hand) == 2))
-    }
+  pl <- play_player_from_hand(
+    start_hand = player_start,
+    shoe       = slice,
+    up_card    = up,
+    strategy   = basic_action,
+    verbose    = FALSE
   )
   shoe <- advance_shoe(shoe, pl$next_idx - 1)
   
@@ -260,6 +331,112 @@ deal_hand_from_shoe <- function(shoe, hit_soft_17 = FALSE, bet = 1, payout_bj = 
 
 #OK zgleda ql :)
 
+# =========================================================
+# B2) ENA IGRA IZ SHOE z Hi-Lo štetjem (+ verbose za debuging)
+# =========================================================
+deal_hand_from_shoe_hilo <- function(shoe, running_count,
+                                     hit_soft_17 = FALSE,
+                                     bet = 1,
+                                     payout_bj = 1.5,
+                                     verbose = FALSE) {
+  if (verbose) {
+    cat("\n=== NEW HAND (Hi-Lo) ===\n")
+    cat(sprintf("shoe pos=%d  cut=%d  total=%d  running_count=%d\n",
+                shoe$pos, shoe$cut, shoe$total, running_count))
+  }
+  
+  # poskrbi za dovolj kart za začetno deljenje
+  slice <- shoe_slice_df(shoe)
+  if (nrow(slice) < 4) {
+    shoe <- maybe_reshuffle(shoe)
+    slice <- shoe_slice_df(shoe)
+    running_count <- 0L  # nov shoe -> reset count
+    if (verbose) cat("RESHUFFLE (premalo kart za začetno deljenje)\n")
+  }
+  
+  # casino vrstni red: P1, D_up, P2, D_hole
+  p1   <- slice$val[1];  up   <- slice$val[2]
+  p2   <- slice$val[3];  hole <- slice$val[4]
+  shoe <- advance_shoe(shoe, 4)
+  
+  player_start <- c(p1, p2)
+  dealer_start <- c(up, hole)
+  
+  # Hi-Lo: upoštevaj začetne 4 karte
+  running_count <- running_count + sum(hi_lo_delta(c(p1, up, p2, hole)))
+  
+  if (verbose) {
+    cat(sprintf("Initial deal -> Player: %d,%d (total=%d) | Dealer: up=%d, hole=?  | RC=%d\n",
+                p1, p2, hand_value(player_start), up, running_count))
+    cat(sprintf("shoe pos after initial: %d\n", shoe$pos))
+  }
+  
+  # Blackjack check
+  psbj <- is_blackjack(player_start)
+  dsbj <- is_blackjack(dealer_start)
+  if (psbj || dsbj) {
+    if (verbose) cat(sprintf("Blackjack check -> playerBJ=%s, dealerBJ=%s\n", psbj, dsbj))
+    gain <- if (psbj && dsbj) 0
+    else if (psbj && !dsbj) bet * payout_bj
+    else -bet
+    return(list(gain = gain, shoe = shoe, running_count = running_count))
+  }
+  
+  # Igralec odigra iz trenutnega shoe, z znano začetno roko
+  slice <- shoe_slice_df(shoe)
+  pl <- play_player_from_hand(
+    start_hand = player_start,
+    shoe       = slice,
+    up_card    = up,
+    strategy   = basic_action,
+    verbose    = verbose
+  )
+  shoe <- advance_shoe(shoe, pl$next_idx - 1)
+  
+  # Hi-Lo: dodatne karte igralca (po začetnih dveh)
+  if (length(pl$cards) > length(player_start)) {
+    extra_player <- pl$cards[(length(player_start) + 1):length(pl$cards)]
+    running_count <- running_count + sum(hi_lo_delta(extra_player))
+  }
+  
+  if (pl$value > 21) {
+    bet_mult <- if (isTRUE(pl$doubled)) 2 else 1
+    if (verbose) {
+      cat(sprintf("PLAYER BUST (total=%d) | RC=%d | gain=%+.1f\n",
+                  pl$value, running_count, -bet * bet_mult))
+    }
+    return(list(gain = -bet * bet_mult, shoe = shoe, running_count = running_count))
+  }
+  
+  # Delivec odigra
+  slice <- shoe_slice_df(shoe)
+  dl <- dealer_play(slice, up = up, hole = hole, hit_soft_17 = hit_soft_17)
+  shoe <- advance_shoe(shoe, dl$next_idx - 1)
+  
+  # Hi-Lo: dodatne karte delivca (tretja, četrta, ...)
+  if (length(dl$cards) > 2) {
+    extra_dealer <- dl$cards[3:length(dl$cards)]
+    running_count <- running_count + sum(hi_lo_delta(extra_dealer))
+  }
+  
+  # Rezultat
+  pv <- pl$value; dv <- dl$value
+  bet_mult <- if (isTRUE(pl$doubled)) 2 else 1
+  gain <- if (dv > 21)  bet * bet_mult
+  else if (pv > dv)  bet * bet_mult
+  else if (pv < dv) -bet * bet_mult
+  else 0
+  
+  if (verbose) {
+    cat(sprintf("FINAL: player=%d  dealer=%d  doubled=%s  RC=%d  -> gain=%+.1f\n",
+                pv, dv, ifelse(isTRUE(pl$doubled),"TRUE","FALSE"),
+                running_count, gain))
+  }
+  
+  list(gain = gain, shoe = shoe, running_count = running_count)
+}
+
+
 # 5) Monte Carlo ------------------------------------------------------
 #(EV, SE, IZ, dobicki)
 
@@ -294,6 +471,60 @@ simulate_with_shoe <- function(N = 1e5,
   ci <- c(mu - 1.96*se, mu + 1.96*se)
   list(EV = mu, SE = se, CI95 = ci, gains = gains)
 }
+
+# =========================================================
+# C2) MONTE CARLO preko istega SHOE z Hi-Lo štetjem
+# =========================================================
+simulate_with_shoe_hilo <- function(N = 1e5,
+                                    n_decks = 6,
+                                    penetration = 0.75,
+                                    hit_soft_17 = FALSE,
+                                    bet = 1,
+                                    payout_bj = 1.5) {
+  shoe <- init_shoe(n_decks = n_decks, penetration = penetration)
+  gains <- numeric(N)
+  running_count <- integer(N)
+  true_count    <- numeric(N)
+  
+  rc <- 0L
+  
+  for (i in seq_len(N)) {
+    shoe <- maybe_reshuffle(shoe)
+    if (isTRUE(shoe$reshuffled)) {
+      rc <- 0L  # nov shoe -> reset
+    }
+    
+    # decks_remaining pred deljenjem te roke
+    decks_remaining <- (shoe$total - shoe$pos + 1) / 52
+    true_count[i]   <- if (decks_remaining > 0) rc / decks_remaining else 0
+    running_count[i] <- rc
+    
+    res <- deal_hand_from_shoe_hilo(
+      shoe          = shoe,
+      running_count = rc,
+      hit_soft_17   = hit_soft_17,
+      bet           = bet,
+      payout_bj     = payout_bj,
+      verbose       = FALSE
+    )
+    gains[i] <- res$gain
+    shoe     <- res$shoe
+    rc       <- res$running_count
+  }
+  
+  mu <- mean(gains); s <- sd(gains); se <- s/sqrt(N)
+  ci <- c(mu - 1.96*se, mu + 1.96*se)
+  
+  list(
+    EV = mu,
+    SE = se,
+    CI95 = ci,
+    gains = gains,
+    running_count = running_count,
+    true_count = true_count
+  )
+}
+
 #__________________________________________________________________________
 
 #test
@@ -327,7 +558,23 @@ set.seed(2025)
 S <- init_shoe(n_decks = 6, penetration = 0.75)
 h1 <- deal_hand_from_shoe(S, hit_soft_17 = FALSE); h1$gain; h1$shoe$pos
 
-# serija z reshuffle
+# serija z reshuffle  *****
 set.seed(2025)
-res <- simulate_with_shoe(N = 1000, n_decks = 6, penetration = 0.75, hit_soft_17 = FALSE)
+res <- simulate_with_shoe(N = 1000, n_decks = 6, penetration = 0.75, hit_soft_17 = FALSE, bet = 1, payout_bj = 1.5)
 res$EV; res$CI95
+
+#[1] -0.0125
+#[1] -0.08929421  0.06429421 ....okeeej najvecja bedaruija je bla, v deal_hand_from_shoe je razdelu karte, pol je bj check nardiu popa spet larte razdelu ce ni bj jao XD, odpravljena napaka :)
+
+#Se z Hi-Lo *****
+set.seed(2025)
+res <- simulate_with_shoe_hilo(N = 1000, n_decks = 6, penetration = 0.75,hit_soft_17 = FALSE,bet = 1,payout_bj = 1.5)
+
+res$EV; res$CI95
+
+#[1] -0.1315
+#[1] -0.20869038 -0.05430962
+
+#!(neki sm weird naredu ker pac ta nova hilo verzija je the same k stara samo da zravn se stejemo, sam rezultat bi mogu bit the same)
+# pogled poteka counta
+head(res$running_count, 10)
