@@ -101,6 +101,40 @@ maybe_reshuffle <- function(shoe) {
   shoe
 }
 
+
+# =========================================================
+# A2) CSV za basic strategy
+# ==================================================
+#Branje CSV tabele basic actions
+BS_TABLE <- read.csv("basic_strategy.csv", stringsAsFactors = FALSE)
+
+#Helper za klasifikacijo roke
+classify_hand <- function(vals, can_split = FALSE) {
+  v     <- hand_value(vals)
+  soft  <- is_soft(vals)
+  pair  <- (length(vals) == 2L) && (vals[1] == vals[2]) && can_split
+  
+  if (pair) {
+    list(
+      group      = "pair",
+      player_total = NA_integer_,
+      pair_rank  = vals[1]
+    )
+  } else if (soft) {
+    list(
+      group      = "soft",
+      player_total = v,
+      pair_rank  = NA_integer_
+    )
+  } else {
+    list(
+      group      = "hard",
+      player_total = v,
+      pair_rank  = NA_integer_
+    )
+  }
+}
+
 # 1) Pravila delivca (S17/H17) ---------------------------------------
 dealer_play <- function(shoe, up, hole, hit_soft_17 = FALSE) {
   hand <- c(up, hole)
@@ -129,6 +163,60 @@ basic_action <- function(player_vals, dealer_up, can_double = TRUE, can_split = 
   if (v >= 17) return("stand")
   return("hit")
 }
+
+#=========================
+#Osnovna strategija CSV
+#=========================
+basic_action_bs <- function(player_vals,
+                            dealer_up,
+                            can_double = TRUE,
+                            can_split  = FALSE,
+                            bs_table   = BS_TABLE) {
+  # 1) klasifikacija roke
+  cl <- classify_hand(player_vals, can_split = can_split)
+  
+  # 2) izberemo ustrezne vrstice iz tabele
+  if (cl$group == "pair") {
+    sub <- subset(bs_table,
+                  player_group == "pair" &
+                    pair_rank    == cl$pair_rank &
+                    dealer_up    == dealer_up)
+  } else {
+    sub <- subset(bs_table,
+                  player_group == cl$group &
+                    player_total == cl$player_total &
+                    dealer_up    == dealer_up)
+  }
+  
+  if (nrow(sub) == 0L) {
+    # ce ni nic od tega pa demoverzija kr XD
+    v <- hand_value(player_vals)
+    if (v <= 11 && can_double) return("double")
+    if (v <= 16 && dealer_up >= 7) return("hit")
+    if (v >= 17) return("stand")
+    return("hit")
+  }
+  
+  code <- sub$action[1]  # predpostavimo, da je ena enolična vrstica
+  
+  # 3) pretvori kodo v naše stringe ("hit", "stand", "double", ...)
+  #    + upoštevaj can_double/can_split
+  total <- hand_value(player_vals)
+  
+  action <- switch(code,
+                   "H" = "hit",
+                   "S" = "stand",
+                   "D" = if (can_double) "double" else "hit",
+                   "P" = if (can_split) {
+                     "split"
+                   } else {
+                     if (total >= 17) "stand" else "hit"
+                   },
+                   "R" = "surrender",
+                   "hit"
+  )
+}
+
 
 # 3) Igralčev potek roke (brez splitov, demo) ----------------------
 play_player <- function(shoe, up_card, strategy = basic_action) {
@@ -161,8 +249,6 @@ play_player <- function(shoe, up_card, strategy = basic_action) {
        actions = action_hist,
        doubled = doubled)
 }
-
-
 # =========================================================
 # (DOD) Za Hi-Lo iz Shoe (+ verbose kr sm rabu mal za debuging, bo proly zbrisan pol k se 1x preverm ce res vse dela kukr bi moglo XD)
 # =========================================================
@@ -403,9 +489,17 @@ deal_hand_from_shoe_hilo <- function(shoe, running_count,
     start_hand = player_start,
     shoe       = slice,
     up_card    = up,
-    strategy   = basic_action,
+    strategy   = function(hand, upc, can_double = TRUE, can_split = FALSE, ...) {
+      basic_action_bs(
+        player_vals = hand,
+        dealer_up   = upc,
+        can_double  = can_double,
+        can_split   = can_split
+      )
+    },
     verbose    = verbose
   )
+  
   shoe <- advance_shoe(shoe, pl$next_idx - 1)
   
   # Hi-Lo: dodatne karte igralca (po začetnih dveh)
@@ -597,6 +691,63 @@ res$EV; res$CI95
 #[1] -0.1315
 #[1] -0.20869038 -0.05430962
 
-#!(neki sm weird naredu ker pac ta nova hilo verzija je the same k stara samo da zravn se stejemo, sam rezultat bi mogu bit the same)
 # pogled poteka counta
 head(res$running_count, 10)
+
+
+
+set.seed(123)
+shoe <- init_shoe()
+rc   <- 0L
+
+#check
+res <- deal_hand_from_shoe_hilo(
+  shoe          = shoe,
+  running_count = rc,
+  hit_soft_17   = FALSE,
+  bet           = 1,
+  payout_bj     = 1.5,
+  verbose       = TRUE
+)
+####
+set.seed(12345)
+shoe <- init_shoe()
+rc   <- 0L
+
+# 1. roka
+res1 <- deal_hand_from_shoe_hilo(
+  shoe          = shoe,
+  running_count = rc,
+  hit_soft_17   = FALSE,
+  bet           = 1,
+  payout_bj     = 1.5,
+  verbose       = TRUE
+)
+
+# posodobi shoe in rc
+shoe <- res1$shoe
+rc   <- res1$running_count
+
+# 2. roka iz ISTEGA shoe, z novim RC
+res2 <- deal_hand_from_shoe_hilo(
+  shoe          = shoe,
+  running_count = rc,
+  hit_soft_17   = FALSE,
+  bet           = 1,
+  payout_bj     = 1.5,
+  verbose       = TRUE
+)
+
+shoe <- res2$shoe
+rc   <- res2$running_count
+
+# 3. roka
+res3 <- deal_hand_from_shoe_hilo(
+  shoe          = shoe,
+  running_count = rc,
+  hit_soft_17   = FALSE,
+  bet           = 1,
+  payout_bj     = 1.5,
+  verbose       = TRUE
+)
+
