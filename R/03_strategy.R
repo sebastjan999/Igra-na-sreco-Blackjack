@@ -90,6 +90,7 @@ basic_action_bs <- function(player_vals,
   #    + upoštevaj can_double/can_split
   total <- hand_value(player_vals)
   
+  code <- trimws(toupper(sub$action[1]))
   action <- switch(code,
                    "H" = "hit",
                    "S" = "stand",

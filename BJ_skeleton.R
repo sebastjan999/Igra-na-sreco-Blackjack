@@ -203,6 +203,7 @@ basic_action_bs <- function(player_vals,
   #    + upoštevaj can_double/can_split
   total <- hand_value(player_vals)
   
+  code <- trimws(toupper(sub$action[1]))
   action <- switch(code,
                    "H" = "hit",
                    "S" = "stand",
@@ -215,6 +216,7 @@ basic_action_bs <- function(player_vals,
                    "R" = "surrender",
                    "hit"
   )
+  return(action)
 }
 
 
@@ -544,7 +546,6 @@ deal_hand_from_shoe_hilo <- function(shoe, running_count,
   
   list(gain = gain, shoe = shoe, running_count = running_count)
 }
-
 
 # 5) Monte Carlo ------------------------------------------------------
 #(EV, SE, IZ, dobicki)
