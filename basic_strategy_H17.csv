@@ -38,7 +38,7 @@ hard,11,NA,7,D
 hard,11,NA,8,D
 hard,11,NA,9,D
 hard,11,NA,10,D
-hard,11,NA,11,H
+hard,11,NA,11,D
 hard,12,NA,2,H
 hard,12,NA,3,H
 hard,12,NA,4,S
@@ -78,7 +78,7 @@ hard,15,NA,7,H
 hard,15,NA,8,H
 hard,15,NA,9,H
 hard,15,NA,10,R
-hard,15,NA,11,H
+hard,15,NA,11,R
 hard,16,NA,2,S
 hard,16,NA,3,S
 hard,16,NA,4,S
@@ -98,7 +98,7 @@ hard,17,NA,7,S
 hard,17,NA,8,S
 hard,17,NA,9,S
 hard,17,NA,10,S
-hard,17,NA,11,S
+hard,17,NA,11,R
 hard,18,NA,2,S
 hard,18,NA,3,S
 hard,18,NA,4,S
@@ -180,10 +180,10 @@ soft,17,NA,9,H
 soft,17,NA,10,H
 soft,17,NA,11,H
 soft,18,NA,2,S
-soft,18,NA,3,Ds
-soft,18,NA,4,Ds
-soft,18,NA,5,Ds
-soft,18,NA,6,Ds
+soft,18,NA,3,D
+soft,18,NA,4,D
+soft,18,NA,5,D
+soft,18,NA,6,D
 soft,18,NA,7,S
 soft,18,NA,8,S
 soft,18,NA,9,H
@@ -193,7 +193,7 @@ soft,19,NA,2,S
 soft,19,NA,3,S
 soft,19,NA,4,S
 soft,19,NA,5,S
-soft,19,NA,6,D
+soft,19,NA,6,Ds
 soft,19,NA,7,S
 soft,19,NA,8,S
 soft,19,NA,9,S
@@ -278,7 +278,7 @@ pair,NA,8,7,P
 pair,NA,8,8,P
 pair,NA,8,9,P
 pair,NA,8,10,P
-pair,NA,8,11,P
+pair,NA,8,11,R
 pair,NA,9,2,P
 pair,NA,9,3,P
 pair,NA,9,4,P

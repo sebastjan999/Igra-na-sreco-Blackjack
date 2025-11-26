@@ -317,12 +317,17 @@ deal_hand_from_shoe_hilo <- function(shoe, running_count,
     running_count <- running_count + sum(hi_lo_delta(extra_player))
   }
   
-  #Opcija za surrender
+  # Opcija za surrender
   if (pl$surrendered) {
-    bet_mult <- if (isTRUE(pl$doubled)) 2 else 1  # surrender po double je v praksi malo tricky, lahko pa recimo prepoveš "R" po dvojitvi v tabeli
+    bet_mult <- if (isTRUE(pl$doubled)) 2 else 1
     gain <- -0.5 * bet_mult * bet  # izgubiš pol stave
-    return(list(gain = gain, shoe = shoe))
+    return(list(
+      gain          = gain,
+      shoe          = shoe,
+      running_count = running_count
+    ))
   }
+  
   
   if (pl$value > 21) {
     bet_mult <- if (isTRUE(pl$doubled)) 2 else 1

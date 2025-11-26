@@ -207,6 +207,7 @@ basic_action_bs <- function(player_vals,
   action <- switch(code,
                    "H" = "hit",
                    "S" = "stand",
+                   "DS" = if (can_double) "double" else "stand",
                    "D" = if (can_double) "double" else "hit",
                    "P" = if (can_split) {
                      "split"
@@ -533,11 +534,15 @@ deal_hand_from_shoe_hilo <- function(shoe, running_count,
     running_count <- running_count + sum(hi_lo_delta(extra_player))
   }
   
-  #Opcija za surrender
+  # Opcija za surrender
   if (pl$surrendered) {
-    bet_mult <- if (isTRUE(pl$doubled)) 2 else 1  # surrender po double je v praksi malo tricky, lahko pa recimo prepoveš "R" po dvojitvi v tabeli
+    bet_mult <- if (isTRUE(pl$doubled)) 2 else 1
     gain <- -0.5 * bet_mult * bet  # izgubiš pol stave
-    return(list(gain = gain, shoe = shoe))
+    return(list(
+      gain          = gain,
+      shoe          = shoe,
+      running_count = running_count
+    ))
   }
   
   if (pl$value > 21) {
@@ -714,7 +719,7 @@ res$EV; res$CI95
 #basicaly, mi smo razdelil, checknl bj pol pa odigral stari play_playwer, ki je razdelu karte in odigrau XD
 
 #Se z Hi-Lo *****
-set.seed(2025)
+set.seed(2005)
 res <- simulate_with_shoe_hilo(N = 1000, n_decks = 6, penetration = 0.75, hit_soft_17 = FALSE,bet = 1,payout_bj = 1.5)
 
 res$EV; res$CI95

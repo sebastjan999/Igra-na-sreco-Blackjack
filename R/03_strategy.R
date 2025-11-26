@@ -94,6 +94,7 @@ basic_action_bs <- function(player_vals,
   action <- switch(code,
                    "H" = "hit",
                    "S" = "stand",
+                   "DS" = if (can_double) "double" else "stand",
                    "D" = if (can_double) "double" else "hit",
                    "P" = if (can_split) {
                      "split"
