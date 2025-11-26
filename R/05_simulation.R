@@ -26,9 +26,27 @@ simulate_with_shoe <- function(N = 1e5,
     shoe <- res$shoe
   }
   
-  mu <- mean(gains); s <- sd(gains); se <- s/sqrt(N)
+  
+  mu <- mean(gains);var <- var(gains); s <- sd(gains); se <- s/sqrt(N)
   ci <- c(mu - 1.96*se, mu + 1.96*se)
-  list(EV = mu, SE = se, CI95 = ci, gains = gains)
+  win_rate = mean(gains > 0);
+  loss_rate = mean(gains < 0);
+  push_rate = mean(gains == 0);
+  #bj_rate = mean(blackjack);
+  #surrender_rate = mean(surrender);
+  
+  list(
+    EV = mu,
+    Var = var,
+    SD = s,
+    SE = se,
+    CI95 = ci,
+    gains = gains,
+    win_rate = win_rate,
+    loss_rate = loss_rate,
+    push_rate = push_rate
+    
+  )
 }
 
 # MONTE CARLO preko istega SHOE z Hi-Lo štetjem  + bet spread
@@ -74,16 +92,27 @@ simulate_with_shoe_hilo <- function(N = 1e5,
     rc       <- res$running_count
   }
   
-  mu <- mean(gains); s <- sd(gains); se <- s/sqrt(N)
+  mu <- mean(gains);var <- var(gains); s <- sd(gains); se <- s/sqrt(N)
   ci <- c(mu - 1.96*se, mu + 1.96*se)
+  win_rate = mean(gains > 0);
+  loss_rate = mean(gains < 0);
+  push_rate = mean(gains == 0);
+  #bj_rate = mean(blackjack);
+  #surrender_rate = mean(surrender);
   
   list(
     EV = mu,
+    Var = var,
+    SD = s,
     SE = se,
     CI95 = ci,
     gains = gains,
     running_count = running_count,
     true_count = true_count, print(true_count),
-    bet = bet_s, print(bet_s)
+    bet = bet_s, print(bet_s),
+    win_rate = win_rate,
+    loss_rate = loss_rate,
+    push_rate = push_rate
+    
   )
 }

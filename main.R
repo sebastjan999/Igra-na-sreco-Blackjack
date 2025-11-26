@@ -16,10 +16,18 @@ res <- simulate_with_shoe(N = 1000, n_decks = 6,
 res$EV
 res$CI95
 
-res <- simulate_with_shoe_hilo(N = 1000, n_decks = 6,
+res1 <- simulate_with_shoe_hilo(N = 1000, n_decks = 6,
+                               penetration = 0.75,
+                               hit_soft_17 = FALSE,
+                               bet = 1,
+                               payout_bj = 1.5)
+res1$EV
+res1$CI95
+res1
+res2 <- simulate_with_shoe_hilo(N = 1000, n_decks = 6,
                           penetration = 0.75,
-                          hit_soft_17 = FALSE,
+                          hit_soft_17 = TRUE,
                           bet = 1,
                           payout_bj = 1.5)
-res$EV
-res$CI95
+res2$EV
+res2$CI95
