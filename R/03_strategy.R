@@ -62,35 +62,35 @@ basic_action_bs <- function(player_vals,
   # 1) klasifikacija roke
   cl <- classify_hand(player_vals, can_split = can_split)
   
+  # da ne kolidira z imenom stolpca:
+  dealer_val <- dealer_up
+  
   # 2) izberemo ustrezne vrstice iz tabele
   if (cl$group == "pair") {
     sub <- subset(bs_table,
                   player_group == "pair" &
                     pair_rank    == cl$pair_rank &
-                    dealer_up    == dealer_up)
+                    dealer_up    == dealer_val)
   } else {
     sub <- subset(bs_table,
                   player_group == cl$group &
                     player_total == cl$player_total &
-                    dealer_up    == dealer_up)
+                    dealer_up    == dealer_val)
   }
   
   if (nrow(sub) == 0L) {
-    # ce ni nic od tega pa demoverzija kr XD
+    # fallback demoverzija
     v <- hand_value(player_vals)
     if (v <= 11 && can_double) return("double")
-    if (v <= 16 && dealer_up >= 7) return("hit")
+    if (v <= 16 && dealer_val >= 7) return("hit")
     if (v >= 17) return("stand")
     return("hit")
   }
   
-  code <- sub$action[1]  # predpostavimo, da je ena enolična vrstica
-  
-  # 3) pretvori kodo v naše stringe ("hit", "stand", "double", ...)
-  #    + upoštevaj can_double/can_split
+  # vzemi kodo iz tabele (očisti presledke in case)
+  code <- trimws(toupper(sub$action[1]))
   total <- hand_value(player_vals)
   
-  code <- trimws(toupper(sub$action[1]))
   action <- switch(code,
                    "H" = "hit",
                    "S" = "stand",
@@ -103,5 +103,7 @@ basic_action_bs <- function(player_vals,
                    "R" = "surrender",
                    "hit"
   )
+  
+  return(action)
 }
 

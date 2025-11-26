@@ -189,7 +189,7 @@ basic_action_bs <- function(player_vals,
   }
   
   if (nrow(sub) == 0L) {
-    # ce ni nic od tega pa demoverzija kr XD
+    # fallback demoverzija
     v <- hand_value(player_vals)
     if (v <= 11 && can_double) return("double")
     if (v <= 16 && dealer_up >= 7) return("hit")
@@ -197,13 +197,10 @@ basic_action_bs <- function(player_vals,
     return("hit")
   }
   
-  code <- sub$action[1]  # predpostavimo, da je ena enolična vrstica
-  
-  # 3) pretvori kodo v naše stringe ("hit", "stand", "double", ...)
-  #    + upoštevaj can_double/can_split
+  # vzemi kodo iz tabele (očisti presledke in case)
+  code <- trimws(toupper(sub$action[1]))
   total <- hand_value(player_vals)
   
-  code <- trimws(toupper(sub$action[1]))
   action <- switch(code,
                    "H" = "hit",
                    "S" = "stand",
@@ -216,8 +213,10 @@ basic_action_bs <- function(player_vals,
                    "R" = "surrender",
                    "hit"
   )
+  
   return(action)
 }
+
 
 
 # 3) Igralčev potek roke (brez splitov, demo) ----------------------
