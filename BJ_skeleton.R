@@ -106,7 +106,7 @@ maybe_reshuffle <- function(shoe) {
 # A2) CSV za basic strategy
 # ==================================================
 #Branje CSV tabele basic actions
-BS_TABLE <- read.csv("basic_strategy.csv", stringsAsFactors = FALSE)
+BS_TABLE_S17 <- read.csv("basic_strategy.csv", stringsAsFactors = FALSE)
 
 #Helper za klasifikacijo roke
 classify_hand <- function(vals, can_split = FALSE) {
@@ -171,28 +171,31 @@ basic_action_bs <- function(player_vals,
                             dealer_up,
                             can_double = TRUE,
                             can_split  = FALSE,
-                            bs_table   = BS_TABLE) {
+                            bs_table   = BS_TABLE_S17) {
   # 1) klasifikacija roke
   cl <- classify_hand(player_vals, can_split = can_split)
+  
+  # da ne kolidira z imenom stolpca:
+  dealer_val <- dealer_up
   
   # 2) izberemo ustrezne vrstice iz tabele
   if (cl$group == "pair") {
     sub <- subset(bs_table,
                   player_group == "pair" &
                     pair_rank    == cl$pair_rank &
-                    dealer_up    == dealer_up)
+                    dealer_up    == dealer_val)
   } else {
     sub <- subset(bs_table,
                   player_group == cl$group &
                     player_total == cl$player_total &
-                    dealer_up    == dealer_up)
+                    dealer_up    == dealer_val)
   }
   
   if (nrow(sub) == 0L) {
     # fallback demoverzija
     v <- hand_value(player_vals)
     if (v <= 11 && can_double) return("double")
-    if (v <= 16 && dealer_up >= 7) return("hit")
+    if (v <= 16 && dealer_val >= 7) return("hit")
     if (v >= 17) return("stand")
     return("hit")
   }
@@ -216,8 +219,6 @@ basic_action_bs <- function(player_vals,
   
   return(action)
 }
-
-
 
 # 3) Igralčev potek roke (brez splitov, demo) ----------------------
 play_player <- function(shoe, up_card, strategy = basic_action) {
@@ -267,10 +268,17 @@ play_player_from_hand <- function(start_hand, shoe, up_card,
                 paste(hand, collapse=","), hand_value(hand)))
   }
   
+  surrendered <- FALSE
+  
   repeat {
     a <- strategy(hand, up_card, can_double = (length(hand) == 2))
     action_hist <- c(action_hist, a)
     if (verbose) cat(sprintf(" -> action: %s\n", a))
+    
+    if (a == "surrender") {
+      surrendered <- TRUE
+      break
+    }
     
     if (a == "stand") break
     
@@ -305,7 +313,8 @@ play_player_from_hand <- function(start_hand, shoe, up_card,
     cards   = hand,
     next_idx = idx,
     actions = action_hist,
-    doubled = doubled
+    doubled = doubled,
+    surrendered = surrendered
   )
 }
 
@@ -389,10 +398,25 @@ deal_hand_from_shoe <- function(shoe, hit_soft_17 = FALSE, bet = 1, payout_bj = 
     start_hand = player_start,
     shoe       = slice,
     up_card    = up,
-    strategy   = basic_action,
+    strategy   = function(hand, upc, can_double = TRUE, can_split = FALSE, ...) {
+      basic_action_bs(
+        player_vals = hand,
+        dealer_up   = upc,
+        can_double  = can_double,
+        can_split   = can_split
+      )
+    },
     verbose    = FALSE
   )
+  
   shoe <- advance_shoe(shoe, pl$next_idx - 1)
+  
+  #Opcija za surrender
+  if (pl$surrendered) {
+    bet_mult <- if (isTRUE(pl$doubled)) 2 else 1  # surrender po double je v praksi malo tricky, lahko pa recimo prepoveš "R" po dvojitvi v tabeli
+    gain <- -0.5 * bet_mult * bet  # izgubiš pol stave
+    return(list(gain = gain, shoe = shoe))
+  }
   
   # Če bust, takoj vrni
   if (pl$value > 21) {
@@ -507,6 +531,13 @@ deal_hand_from_shoe_hilo <- function(shoe, running_count,
   if (length(pl$cards) > length(player_start)) {
     extra_player <- pl$cards[(length(player_start) + 1):length(pl$cards)]
     running_count <- running_count + sum(hi_lo_delta(extra_player))
+  }
+  
+  #Opcija za surrender
+  if (pl$surrendered) {
+    bet_mult <- if (isTRUE(pl$doubled)) 2 else 1  # surrender po double je v praksi malo tricky, lahko pa recimo prepoveš "R" po dvojitvi v tabeli
+    gain <- -0.5 * bet_mult * bet  # izgubiš pol stave
+    return(list(gain = gain, shoe = shoe))
   }
   
   if (pl$value > 21) {
@@ -684,7 +715,7 @@ res$EV; res$CI95
 
 #Se z Hi-Lo *****
 set.seed(2025)
-res <- simulate_with_shoe_hilo(N = 1000, n_decks = 6, penetration = 0.75,hit_soft_17 = FALSE,bet = 1,payout_bj = 1.5)
+res <- simulate_with_shoe_hilo(N = 1000, n_decks = 6, penetration = 0.75, hit_soft_17 = FALSE,bet = 1,payout_bj = 1.5)
 
 res$EV; res$CI95
 

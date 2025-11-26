@@ -1,5 +1,5 @@
 #Branje CSV tabele basic actions
-BS_TABLE <- read.csv("basic_strategy.csv", stringsAsFactors = FALSE)
+BS_TABLE_S17 <- read.csv("basic_strategy.csv", stringsAsFactors = FALSE)
 
 # Bet spread glede na Hi-Lo true count (kle se lah tut mal igram pa se visje stave delam 12, 16,... bo kasneje k bom metrike zbirou mejbi zanimiv)
 bet_spread <- function(true_count) {
@@ -58,7 +58,7 @@ basic_action_bs <- function(player_vals,
                             dealer_up,
                             can_double = TRUE,
                             can_split  = FALSE,
-                            bs_table   = BS_TABLE) {
+                            bs_table  = BS_TABLE_S17 ) {
   # 1) klasifikacija roke
   cl <- classify_hand(player_vals, can_split = can_split)
   

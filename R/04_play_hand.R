@@ -62,10 +62,17 @@ play_player_from_hand <- function(start_hand, shoe, up_card,
                 paste(hand, collapse=","), hand_value(hand)))
   }
   
+  surrendered <- FALSE 
+  
   repeat {
     a <- strategy(hand, up_card, can_double = (length(hand) == 2))
     action_hist <- c(action_hist, a)
     if (verbose) cat(sprintf(" -> action: %s\n", a))
+    
+    if (a == "surrender") {
+      surrendered <- TRUE
+      break
+    }
     
     if (a == "stand") break
     
@@ -100,7 +107,8 @@ play_player_from_hand <- function(start_hand, shoe, up_card,
     cards   = hand,
     next_idx = idx,
     actions = action_hist,
-    doubled = doubled
+    doubled = doubled,
+    surrendered = surrendered
   )
 }
 #bj payout nastavmo na 3:2 (kksni casinoji majo sicer slabs 6:5...kasneje za metrike pa HE bomo mal spreminjal)
@@ -175,10 +183,25 @@ deal_hand_from_shoe <- function(shoe, hit_soft_17 = FALSE, bet = 1, payout_bj = 
     start_hand = player_start,
     shoe       = slice,
     up_card    = up,
-    strategy   = basic_action,
+    strategy   = function(hand, upc, can_double = TRUE, can_split = FALSE, ...) {
+      basic_action_bs(
+        player_vals = hand,
+        dealer_up   = upc,
+        can_double  = can_double,
+        can_split   = can_split
+      )
+    },
     verbose    = FALSE
   )
+  
   shoe <- advance_shoe(shoe, pl$next_idx - 1)
+  
+  #Opcija za surrender
+  if (pl$surrendered) {
+    bet_mult <- if (isTRUE(pl$doubled)) 2 else 1  # surrender po double je v praksi malo tricky, lahko pa recimo prepoveš "R" po dvojitvi v tabeli
+    gain <- -0.5 * bet_mult * bet  # izgubiš pol stave
+    return(list(gain = gain, shoe = shoe))
+  }
   
   # Če bust, takoj vrni
   if (pl$value > 21) {
@@ -292,6 +315,13 @@ deal_hand_from_shoe_hilo <- function(shoe, running_count,
   if (length(pl$cards) > length(player_start)) {
     extra_player <- pl$cards[(length(player_start) + 1):length(pl$cards)]
     running_count <- running_count + sum(hi_lo_delta(extra_player))
+  }
+  
+  #Opcija za surrender
+  if (pl$surrendered) {
+    bet_mult <- if (isTRUE(pl$doubled)) 2 else 1  # surrender po double je v praksi malo tricky, lahko pa recimo prepoveš "R" po dvojitvi v tabeli
+    gain <- -0.5 * bet_mult * bet  # izgubiš pol stave
+    return(list(gain = gain, shoe = shoe))
   }
   
   if (pl$value > 21) {
