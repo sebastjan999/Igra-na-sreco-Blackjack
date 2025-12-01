@@ -20,7 +20,7 @@ output: html_document
 
 **Parametri, ki jih spreminjamo v simulacijah:** število kompletov, H17/S17, izplačilo za BJ (3:2 ali 6:5), *surrender*, *DAS/RSA*, penetracija (delež odigranih kart pred mešanjem).
 
-**Metrike:** dobiček na stavo $G$, verjetnosti izidov (win/lose/push), volatilnost (aka. standardni odklon).\
+**Metrike:** dobiček na stavo $G$, verjetnosti izidov (win/lose/push), volatilnost (aka. standardni odklon), več v nadaljevanju.\
 **House edge:** $\mathrm{HE}=-\mathbb{E}[G]$. Negativen $\mathbb{E}[G]$ pomeni prednost hiše.
 
 ------------------------------------------------------------------------
@@ -49,10 +49,10 @@ $$
 ## 2.2 Vrste strategij
 
 | Tip strategije                                                           | Opis                                                                           | Namen                   |
-|------------------------|------------------------|------------------------|
+|--------------------------|----------------------------|------------------|
 | **Naključna (nej bo ta "demo" verzija nakljucna, osnovna bo pa tabela)** | Poteze brez logike.                                                            | Kontrolni primer.       |
 | **Osnovna (Basic)**                                                      | Optimalna glede na pričakovani izid, brez štetja kart.                         | Standard v simulacijah. |
-| **Napredna**                                                             | Uporabi dodatne informacije (npr. štetje kart) za prilagoditev potez in stava. | Poveča dolgoročni $EV$. |
+| **Napredna**                                                             | Uporabi dodatne informacije (npr. štetje kart) za prilagoditev potez in stave. | Poveča dolgoročni $EV$. |
 
 V nadaljevanju uporabljamo **osnovno strategijo**.
 
@@ -72,43 +72,21 @@ $$
 
 V praksi tabelo $\pi^*$ dobimo z DP ali simulacijo → **tabela osnovne strategije**.
 
-## 2.4 Osnovna strategija (izsek za hard roke, kasneje se soft in pari)
-
-Vir: <https://www.blackjackonlineigra.eu/article/tabela-za-osnovno-strategijo-igranja-blackjacka>
-
-**Nastavitve:** 6 kompletov kart, S17 (*dealer stands on soft 17*), brez *surrender*.
-
-**Legenda:**\
-- **H** = *Hit*\
-- **S** = *Stand*\
-- **D** = *Double* (če ni možno, vzemi *Hit*)\
-- **P** = *Split*
-
-| Igralčeva vsota |  2  |  3  |  4  |  5  |  6  |  7  |  8  |  9  | 10  |  A  |
-|----------------:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-|      8 ali manj |  H  |  H  |  H  |  H  |  H  |  H  |  H  |  H  |  H  |  H  |
-|               9 | H?  |  D  |  D  |  D  |  D  |  H  |  H  |  H  |  H  |  H  |
-|              10 |  D  |  D  |  D  |  D  |  D  |  D  |  D  |  D  |  H  |  H  |
-|              11 |  D  |  D  |  D  |  D  |  D  |  D  |  D  |  D  |  D  |  H  |
-|              12 |  H  |  H  |  S  |  S  |  S  |  H  |  H  |  H  |  H  |  H  |
-|           13–16 |  S  |  S  |  S  |  S  |  S  |  H  |  H  |  H  |  H  |  H  |
-|      17 ali več |  S  |  S  |  S  |  S  |  S  |  S  |  S  |  S  |  S  |  S  |
-
-*Opomba:* Pari (npr. 10–10, 8–8, A–A) in *soft* roke (A+X) imajo ločene sezname optimalnih potez (v pripravi).
-
-## 2.5 Napredna strategija štetje kart (Hi–Lo) [STILL WiP]
-
 ## 2.4 Osnovna strategija (izsek za *hard* roke)
 
 Vir (prilagojeno): <https://www.blackjackonlineigra.eu/article/tabela-za-osnovno-strategijo-igranja-blackjacka>
 
-**Nastavitve:** 6 kompletov kart, S17 (*dealer stands on soft 17*), brez *surrender (for now....WiP)*.
+<https://www.blackjackapprenticeship.com/blackjack-strategy-charts/>
+
+**Nastavitve:** 6 kompletov kart, S17 (*dealer stands on soft 17*), dodan tudi H17
 
 **Legenda:**\
 - **H** = *Hit*\
 - **S** = *Stand*\
 - **D** = *Double* (če ni možno, vzemi *Hit*)\
-- **P** = *Split*
+- **Ds** = *Double* (če ni možno, vzemi *Stand*)\
+- **P** = *Split*\
+- **R** = *Surrender*
 
 Tabela prikazuje optimalne poteze za *hard totals* (roka brez asa ali z asom, ki šteje kot 1).\
 Soft roke in pari sledijo v ločenih tabelah (WiP).
@@ -181,5 +159,180 @@ S tem lahko simuliramo vpliv štetja kart na pričakovani dobiček (EV).
 ## 2.6 Povzetek
 
 -   Strategija je $\pi(s)$, ki maksimizira $EV(s,a)$.\
--   V simulacijah uporabljamo **osnovno strategijo**; parametre pravil (H17/S17, izplačila, št. kompletov) spreminjamo.\
--   Napredne metode (štetje kart) so izven obsega implementacije, a pomembne za kontekst.
+-   V simulacijah uporabljamo **osnovno strategijo**; parametre pravil (H17/S17, izplačila, št. kompletov) spreminjamo.
+
+## 2.7 Implementacija osnovne strategije v R
+
+Osnovna strategija je v kodi implementirana preko funkcije:
+
+``` r
+basic_action_bs(player_vals, dealer_up, can_double, can_split, bs_table)
+```
+
+ki glede na igralčevo roko, delivčevo *upcard* in pravila igre (H17 ali S17) izbere optimalno potezo iz CSV tabele.
+
+Uporabljam dve ločeni tabeli osnovne strategije:
+
+-   `basic_strategy.csv` — pravila za **S17** (*dealer stands on soft 17*)
+-   `basic_strategy_H17.csv` — pravila za **H17** (*dealer hits soft 17*)
+
+Vsaka vrstica v CSV vsebuje: - tip roke, aka. `player_group` (`hard`, `soft`, `pair`) - igralčevo vrednost (`player_total` ali `pair_rank`) - delivčevo karto (`dealer_up`) - optimalno akcijo (`H, S, D, Ds, P, R`)
+
+Postopek izvajanja: 1. roka se razvrsti med *hard*, *soft* ali *pair* 2. iz ustrezne CSV se izbere optimalna vrstica 3. akcijska koda se prevede v potezo (*hit*, *stand*, *double*, *split*, *surrender*)
+
+Pravila H17/S17 preklapljamo zgolj z izbiro druge CSV tabele.
+
+------------------------------------------------------------------------
+
+# 3. Simulacijski model in metrike
+
+## 3.1 Struktura simulacije
+
+Simulacija ima dva nivoja:
+
+### (1) Simulacija ene roke
+
+Funkciji `deal_hand_from_shoe()` in `deal_hand_from_shoe_hilo()` izvedeta:\
+1. začetno deljenje (P1, P2, D_up, D_hole)\
+2. preverjanje blackjacka\
+3. igralčevo igro po osnovni strategiji\
+4. delivčevo igro po pravilih H17 ali S17\
+5. izračun dobička roke\
+6. beleženje dogodkov:\
+- blackjack igralca / delivca\
+- bust igralca / delivca\
+- surrender\
+- double\
+- pri Hi–Lo: posodobitev tekočega counta (running count)
+
+### (2) Monte Carlo simulacija (N zaporednih rok)
+
+-   `simulate_with_shoe()` — osnovna strategija, fiksna stava
+-   `simulate_with_shoe_hilo()` — strategija + Hi–Lo štetje + bet spread
+
+Obe simulaciji: - inicializirata *shoe* z dano penetracijo - pred vsako roko preverita, ali je treba ponovno premešati - zbirata izide v vektor `gains` - beležita indikatorje (BJ, bust, double, surrender) - izračunata statistične metrike
+
+------------------------------------------------------------------------
+
+## 3.2 Metrike, ki jih vračata simulaciji
+
+### 3.2.1 Osnovne statistike dobička
+
+Pričakovani dobiček na roko:
+
+$$
+EV = \frac{1}{N}\sum_{i=1}^{N} G_i
+$$
+
+Varianca in standardni odklon:
+
+$$
+SD = \sqrt{\mathrm{Var}(G)}
+$$
+
+Standardna napaka ocene:
+
+$$
+SE = \frac{SD}{\sqrt{N}}
+$$
+
+95% interval zaupanja:
+
+$$
+EV \pm 1.96 \cdot SE
+$$
+
+Pri Hi–Lo simulaciji dodatno:
+
+$$
+EV_{100} = 100 \cdot EV
+$$
+
+------------------------------------------------------------------------
+
+### 3.2.2 Porazdelitev osnovnih izidov
+
+-   **Win rate:**\
+    $$ P(G > 0) $$
+-   **Loss rate:**\
+    $$ P(G < 0) $$
+-   **Push rate:**\
+    $$ P(G = 0) $$
+
+------------------------------------------------------------------------
+
+### 3.2.3 Posebni dogodki (frekvence)
+
+Simulacija meri:\
+- blackjack igralca\
+- blackjack delivca\
+- surrender\
+- bust igralca\
+- bust delivca\
+- double\
+
+------------------------------------------------------------------------
+
+### 3.2.4 Bankroll in tveganje
+
+Potek kapitala:
+
+$$
+\text{bankroll}(i) = \sum_{k=1}^{i} G_k
+$$
+
+Drawdown (padec od lokalnega maksimuma):
+
+$$
+DD(i) = \max_{j \le i} \text{bankroll}(j) - \text{bankroll}(i)
+$$
+
+Največji drawdown:
+
+$$
+\text{MaxDD} = \max_i DD(i)
+$$
+
+------------------------------------------------------------------------
+
+### 3.2.5 Hi–Lo specifične metrike
+
+Tekoči count:
+
+$$
+C = \sum \text{(vrednosti vseh do sedaj videnih kart)}
+$$
+
+True count:
+
+$$
+TC = \frac{C}{\text{decks remaining}}
+$$
+
+kjer:
+
+$$
+\text{decks remaining} = \frac{\text{total_cards} - \text{pos} + 1}{52}
+$$
+
+ROI — donos na vložek:
+
+$$
+ROI = \frac{\sum_i G_i}{\sum_i \text{bet}_i}
+$$
+
+Pogojni EV glede na TC:
+
+$$
+EV(TC = t) = \mathbb{E}[G \mid \text{round}(TC) = t]
+$$
+
+------------------------------------------------------------------------
+
+## 3.3 Povzetek simulacijskega dela
+
+-   Osnovna strategija je implementirana preko CSV tabel (S17, H17)
+-   Simulaciji `simulate_with_shoe()` in `simulate_with_shoe_hilo()` izvajata realistično Monte Carlo simulacijo blackjacka z mešanjem glede na penetracijo
+-   Izračunane so metrike: EV, SD, SE, 95% CI, frekvence BJ/bust/double/surrender, potek bankrolla, max drawdown
+-   Hi–Lo razširitev vključuje: running count, true count, bet spread, ROI, EV po TC
+-   Te metrike omogočajo analizo vpliva pravil igre ter oceno prednosti pri štetju kart
