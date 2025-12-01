@@ -171,10 +171,23 @@ deal_hand_from_shoe <- function(shoe, hit_soft_17 = FALSE, bet = 1, payout_bj = 
   dealer_start <- c(up, hole)
   
   # Blackjack check
-  if (is_blackjack(player_start) || is_blackjack(dealer_start)) {
-    if (is_blackjack(player_start) && is_blackjack(dealer_start)) return(list(gain = 0, shoe = shoe))
-    if (is_blackjack(player_start)) return(list(gain =  bet * payout_bj, shoe = shoe))
-    if (is_blackjack(dealer_start)) return(list(gain = -bet,            shoe = shoe))
+  psbj <- is_blackjack(player_start)
+  dsbj <- is_blackjack(dealer_start)
+  if (psbj || dsbj) {
+    gain <- if (psbj && dsbj) 0
+    else if (psbj && !dsbj) bet * payout_bj
+    else -bet
+    
+    return(list(
+      gain         = gain,
+      shoe         = shoe,
+      player_bj    = psbj,
+      dealer_bj    = dsbj,
+      player_bust  = FALSE,
+      dealer_bust  = FALSE,
+      surrendered  = FALSE,
+      doubled      = FALSE
+    ))
   }
   
   # Igralec odigra (iz trenutnega shoe) #popravek 18.11 :)
@@ -200,13 +213,32 @@ deal_hand_from_shoe <- function(shoe, hit_soft_17 = FALSE, bet = 1, payout_bj = 
   if (pl$surrendered) {
     bet_mult <- if (isTRUE(pl$doubled)) 2 else 1  # surrender po double je v praksi malo tricky, lahko pa recimo prepoveš "R" po dvojitvi v tabeli
     gain <- -0.5 * bet_mult * bet  # izgubiš pol stave
-    return(list(gain = gain, shoe = shoe))
+    return(list(
+      gain         = gain,
+      shoe         = shoe,
+      player_bj    = FALSE,
+      dealer_bj    = FALSE,
+      player_bust  = FALSE,
+      dealer_bust  = FALSE,
+      surrendered  = TRUE,
+      doubled      = pl$doubled
+    ))
   }
   
   # Če bust, takoj vrni
   if (pl$value > 21) {
     bet_mult <- if (isTRUE(pl$doubled)) 2 else 1
-    return(list(gain = -bet * bet_mult, shoe = shoe))
+    gain <- -bet * bet_mult
+    return(list(
+      gain         = gain,
+      shoe         = shoe,
+      player_bj    = FALSE,
+      dealer_bj    = FALSE,
+      player_bust  = TRUE,
+      dealer_bust  = FALSE,
+      surrendered  = FALSE,
+      doubled      = pl$doubled
+    ))
   }
   
   # Delivec odigra (po S17/H17 pravilih) iz preostanka čevlja
@@ -222,26 +254,17 @@ deal_hand_from_shoe <- function(shoe, hit_soft_17 = FALSE, bet = 1, payout_bj = 
   else if (pv < dv) -bet * bet_mult
   else 0
   
-  list(gain = gain, shoe = shoe)
+  list(
+    gain         = gain,
+    shoe         = shoe,
+    player_bj    = FALSE,
+    dealer_bj    = FALSE,
+    player_bust  = FALSE,
+    dealer_bust  = (dv > 21),
+    surrendered  = FALSE,
+    doubled      = pl$doubled
+  )
 }
-
-#kaj naredimo torej:
-#vzemi slice → če premau kart, reshuffle + spet slice
-
-#razdeli P1, D_up, P2, D_hole → advance_shoe(..., 4)
-
-#BJ check → mejbi return(...)
-
-#player igra iz slice → advance_shoe(..., pl$next_idx - 1)
-
-#če bust → return takoj
-
-#dealer igra iz slice → advance_shoe(..., dl$next_idx - 1)
-
-#primerjava in gain (+ bet_mult za double) → vrni list(gain, shoe)
-
-#OK zgleda ql :)
-
 
 #ENA IGRA IZ SHOE z Hi-Lo štetjem (+ verbose za debuging)
 deal_hand_from_shoe_hilo <- function(shoe, running_count,
@@ -289,7 +312,17 @@ deal_hand_from_shoe_hilo <- function(shoe, running_count,
     gain <- if (psbj && dsbj) 0
     else if (psbj && !dsbj) bet * payout_bj
     else -bet
-    return(list(gain = gain, shoe = shoe, running_count = running_count))
+    return(list(
+      gain          = gain,
+      shoe          = shoe,
+      running_count = running_count,
+      player_bj     = psbj,
+      dealer_bj     = dsbj,
+      player_bust   = FALSE,
+      dealer_bust   = FALSE,
+      surrendered   = FALSE,
+      doubled       = FALSE
+    ))
   }
   
   # Igralec odigra iz trenutnega shoe, z znano začetno roko
@@ -324,18 +357,34 @@ deal_hand_from_shoe_hilo <- function(shoe, running_count,
     return(list(
       gain          = gain,
       shoe          = shoe,
-      running_count = running_count
+      running_count = running_count,
+      player_bj     = FALSE,
+      dealer_bj     = FALSE,
+      player_bust   = FALSE,
+      dealer_bust   = FALSE,
+      surrendered   = TRUE,
+      doubled       = pl$doubled
     ))
   }
   
-  
+  #Bust
   if (pl$value > 21) {
     bet_mult <- if (isTRUE(pl$doubled)) 2 else 1
     if (verbose) {
       cat(sprintf("PLAYER BUST (total=%d) | RC=%d | gain=%+.1f\n",
                   pl$value, running_count, -bet * bet_mult))
     }
-    return(list(gain = -bet * bet_mult, shoe = shoe, running_count = running_count))
+    return(list(
+      gain          = -bet * bet_mult,
+      shoe          = shoe,
+      running_count = running_count,
+      player_bj     = FALSE,
+      dealer_bj     = FALSE,
+      player_bust   = TRUE,
+      dealer_bust   = FALSE,
+      surrendered   = FALSE,
+      doubled       = pl$doubled
+    ))
   }
   
   # Delivec odigra
@@ -363,5 +412,15 @@ deal_hand_from_shoe_hilo <- function(shoe, running_count,
                 running_count, gain))
   }
   
-  list(gain = gain, shoe = shoe, running_count = running_count)
+  list(
+    gain          = gain,
+    shoe          = shoe,
+    running_count = running_count,
+    player_bj     = FALSE,
+    dealer_bj     = FALSE,
+    player_bust   = FALSE,
+    dealer_bust   = (dv > 21),
+    surrendered   = FALSE,
+    doubled       = pl$doubled
+  )
 }

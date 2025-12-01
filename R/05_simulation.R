@@ -17,37 +17,96 @@ simulate_with_shoe <- function(N = 1e5,
                                bet = 1,
                                payout_bj = 1.5) {
   shoe <- init_shoe(n_decks = n_decks, penetration = penetration)
-  gains <- numeric(N)
+  
+  gains        <- numeric(N)
+  bj_player    <- logical(N)
+  bj_dealer    <- logical(N)
+  surrendered  <- logical(N)
+  player_bust  <- logical(N)
+  dealer_bust  <- logical(N)
+  doubled      <- logical(N)
   
   for (i in seq_len(N)) {
     shoe <- maybe_reshuffle(shoe)  # preveri cut pred vsako roko
-    res <- deal_hand_from_shoe(shoe, hit_soft_17 = hit_soft_17, bet = bet, payout_bj = payout_bj)
-    gains[i] <- res$gain
-    shoe <- res$shoe
+    
+    res <- deal_hand_from_shoe(
+      shoe        = shoe,
+      hit_soft_17 = hit_soft_17,
+      bet         = bet,
+      payout_bj   = payout_bj
+    )
+    
+    gains[i]       <- res$gain
+    shoe           <- res$shoe
+    bj_player[i]   <- isTRUE(res$player_bj)
+    bj_dealer[i]   <- isTRUE(res$dealer_bj)
+    surrendered[i] <- isTRUE(res$surrendered)
+    player_bust[i] <- isTRUE(res$player_bust)
+    dealer_bust[i] <- isTRUE(res$dealer_bust)
+    doubled[i]     <- isTRUE(res$doubled)
   }
   
+  # osnovne statistike
+  mu  <- mean(gains)
+  v   <- var(gains)
+  s   <- sd(gains)
+  se  <- s / sqrt(N)
+  ci  <- c(mu - 1.96 * se, mu + 1.96 * se)
   
-  mu <- mean(gains);var <- var(gains); s <- sd(gains); se <- s/sqrt(N)
-  ci <- c(mu - 1.96*se, mu + 1.96*se)
-  win_rate = mean(gains > 0);
-  loss_rate = mean(gains < 0);
-  push_rate = mean(gains == 0);
-  #bj_rate = mean(blackjack);
-  #surrender_rate = mean(surrender);
+  win_rate  <- mean(gains > 0)
+  loss_rate <- mean(gains < 0)
+  push_rate <- mean(gains == 0)
+  
+  bj_rate_player   <- mean(bj_player)
+  bj_rate_dealer   <- mean(bj_dealer)
+  surrender_rate   <- mean(surrendered)
+  player_bust_rate <- mean(player_bust)
+  dealer_bust_rate <- mean(dealer_bust)
+  double_rate      <- mean(doubled)
+  
+  # bankroll potek + max drawdown
+  bankroll <- cumsum(gains)
+  dd       <- cummax(bankroll) - bankroll
+  max_drawdown <- max(dd)   # največji absolutni padec
+  
   
   list(
-    EV = mu,
-    Var = var,
-    SD = s,
-    SE = se,
-    CI95 = ci,
-    gains = gains,
-    win_rate = win_rate,
-    loss_rate = loss_rate,
-    push_rate = push_rate
+    # osnovne metrike
+    N          = N,
+    EV         = mu,
+    Var        = v,
+    SD         = s,
+    SE         = se,
+    CI95       = ci,
     
+    # izidi
+    win_rate   = win_rate,
+    loss_rate  = loss_rate,
+    push_rate  = push_rate,
+    
+    # posebni eventi
+    bj_rate_player   = bj_rate_player,
+    bj_rate_dealer   = bj_rate_dealer,
+    surrender_rate   = surrender_rate,
+    player_bust_rate = player_bust_rate,
+    dealer_bust_rate = dealer_bust_rate,
+    double_rate      = double_rate,
+    
+    # bankroll
+    bankroll     = bankroll,
+    max_drawdown = max_drawdown,
+    
+    # surovi podatki (za grafe itd.)
+    gains        = gains,
+    bj_player    = bj_player,
+    bj_dealer    = bj_dealer,
+    surrendered  = surrendered,
+    player_bust  = player_bust,
+    dealer_bust  = dealer_bust,
+    doubled      = doubled
   )
 }
+
 
 # MONTE CARLO preko istega SHOE z Hi-Lo štetjem  + bet spread
 simulate_with_shoe_hilo <- function(N = 1e5,
@@ -57,11 +116,20 @@ simulate_with_shoe_hilo <- function(N = 1e5,
                                     bet = 1,
                                     payout_bj = 1.5) {
   shoe <- init_shoe(n_decks = n_decks, penetration = penetration)
-  gains <- numeric(N)
-  running_count <- integer(N)
-  true_count    <- numeric(N)
-  bet_s <- numeric(N)
-  rc <- 0L
+  
+  gains        <- numeric(N)
+  running_cnt  <- numeric(N)
+  true_cnt     <- numeric(N)
+  bet_s        <- numeric(N)
+  
+  bj_player    <- logical(N)
+  bj_dealer    <- logical(N)
+  surrendered  <- logical(N)
+  player_bust  <- logical(N)
+  dealer_bust  <- logical(N)
+  doubled      <- logical(N)
+  
+  rc <- 0L  # running count
   
   for (i in seq_len(N)) {
     shoe <- maybe_reshuffle(shoe)
@@ -69,15 +137,17 @@ simulate_with_shoe_hilo <- function(N = 1e5,
       rc <- 0L  # nov shoe -> reset
     }
     
-    # decks_remaining pred deljenjem te roke
+    # decks remaining pred deljenjem te roke
     decks_remaining <- (shoe$total - shoe$pos + 1) / 52
-    true_count[i]   <- if (decks_remaining > 0) rc / decks_remaining else 0
-    running_count[i] <- rc
+    tc_i <- if (decks_remaining > 0) rc / decks_remaining else 0
     
-    # določi bet_i glede na tc (bet spread)
-    spread_mult <- bet_spread(true_count[i])   # 1, 2, 4, 8 ...
-    bet_i <- bet * spread_mult      # realna stava v tej roki
-    bet_s[i] <- bet_i
+    true_cnt[i]    <- tc_i
+    running_cnt[i] <- rc
+    
+    # bet spread: predpostavljam, da imaš bet_spread(tc) definirano
+    spread_mult <- bet_spread(tc_i)  # npr. 1, 2, 4, 8 ...
+    bet_i       <- bet * spread_mult
+    bet_s[i]    <- bet_i
     
     res <- deal_hand_from_shoe_hilo(
       shoe          = shoe,
@@ -87,32 +157,98 @@ simulate_with_shoe_hilo <- function(N = 1e5,
       payout_bj     = payout_bj,
       verbose       = FALSE
     )
-    gains[i] <- res$gain
-    shoe     <- res$shoe
-    rc       <- res$running_count
+    
+    gains[i]       <- res$gain
+    shoe           <- res$shoe
+    rc             <- res$running_count
+    
+    bj_player[i]   <- isTRUE(res$player_bj)
+    bj_dealer[i]   <- isTRUE(res$dealer_bj)
+    surrendered[i] <- isTRUE(res$surrendered)
+    player_bust[i] <- isTRUE(res$player_bust)
+    dealer_bust[i] <- isTRUE(res$dealer_bust)
+    doubled[i]     <- isTRUE(res$doubled)
   }
   
-  mu <- mean(gains);var <- var(gains); s <- sd(gains); se <- s/sqrt(N)
-  ci <- c(mu - 1.96*se, mu + 1.96*se)
-  win_rate = mean(gains > 0);
-  loss_rate = mean(gains < 0);
-  push_rate = mean(gains == 0);
-  #bj_rate = mean(blackjack);
-  #surrender_rate = mean(surrender);
+  # osnovne statistike
+  mu  <- mean(gains)
+  v   <- var(gains)
+  s   <- sd(gains)
+  se  <- s / sqrt(N)
+  ci  <- c(mu - 1.96 * se, mu + 1.96 * se)
+  
+  win_rate  <- mean(gains > 0)
+  loss_rate <- mean(gains < 0)
+  push_rate <- mean(gains == 0)
+  
+  bj_rate_player   <- mean(bj_player)
+  bj_rate_dealer   <- mean(bj_dealer)
+  surrender_rate   <- mean(surrendered)
+  player_bust_rate <- mean(player_bust)
+  dealer_bust_rate <- mean(dealer_bust)
+  double_rate      <- mean(doubled)
+  
+  # bankroll in drawdown
+  bankroll <- cumsum(gains)
+  dd       <- cummax(bankroll) - bankroll
+  max_drawdown <- max(dd)   # največji absolutni padec
+  
+  
+  # ROI in EV na 100 iger
+  total_bet <- sum(bet_s)
+  ROI       <- if (total_bet > 0) sum(gains) / total_bet else NA_real_
+  EV_100    <- 100 * mu
+  
+  # EV po true count (za graf)
+  # zaokrožimo TC in naredimo pogojno pričakovano vrednost
+  tc_round <- round(true_cnt)
+  EV_by_TC <- tapply(gains, tc_round, mean)
   
   list(
-    EV = mu,
-    Var = var,
-    SD = s,
-    SE = se,
-    CI95 = ci,
-    gains = gains,
-    running_count = running_count,
-    true_count = true_count, print(true_count),
-    bet = bet_s, print(bet_s),
-    win_rate = win_rate,
-    loss_rate = loss_rate,
-    push_rate = push_rate
+    # osnovne metrike
+    N          = N,
+    EV         = mu,
+    Var        = v,
+    SD         = s,
+    SE         = se,
+    CI95       = ci,
+    EV_100     = EV_100,
     
+    # izidi
+    win_rate   = win_rate,
+    loss_rate  = loss_rate,
+    push_rate  = push_rate,
+    
+    # posebni eventi
+    bj_rate_player   = bj_rate_player,
+    bj_rate_dealer   = bj_rate_dealer,
+    surrender_rate   = surrender_rate,
+    player_bust_rate = player_bust_rate,
+    dealer_bust_rate = dealer_bust_rate,
+    double_rate      = double_rate,
+    
+    # Hi-Lo stvari
+    running_count = running_cnt,
+    true_count    = true_cnt,
+    EV_by_TC      = EV_by_TC,
+    
+    # stave & ROI
+    bets       = bet_s,
+    total_bet  = total_bet,
+    ROI        = ROI,
+    
+    # bankroll
+    bankroll     = bankroll,
+    max_drawdown = max_drawdown,
+    
+    # surovi podatki
+    gains        = gains,
+    bj_player    = bj_player,
+    bj_dealer    = bj_dealer,
+    surrendered  = surrendered,
+    player_bust  = player_bust,
+    dealer_bust  = dealer_bust,
+    doubled      = doubled
   )
 }
+
