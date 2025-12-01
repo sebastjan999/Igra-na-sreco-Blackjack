@@ -29,7 +29,8 @@ res2_all <- simulate_with_shoe_hilo(N = 1000, n_decks = 6,
                           penetration = 0.75,
                           hit_soft_17 = TRUE,
                           bet = 1,
-                          payout_bj = 1.5)
+                          payout_bj = 1.5,
+                          can_split = TRUE)
 res2_all$EV
 res2_all$CI95
 
