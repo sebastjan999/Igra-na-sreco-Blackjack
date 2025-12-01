@@ -1,5 +1,6 @@
 #Branje CSV tabele basic actions
 BS_TABLE_S17 <- read.csv("basic_strategy.csv", stringsAsFactors = FALSE)
+BS_TABLE_H17 <- read.csv("basic_strategy_H17.csv", stringsAsFactors = FALSE) #ahhh se zato rabm implementirat v basic_action_bs, da se spreminja glede na S17/H17 pravila delivca...odv od TRUE/FALSE
 
 # Bet spread glede na Hi-Lo true count (kle se lah tut mal igram pa se visje stave delam 12, 16,... bo kasneje k bom metrike zbirou mejbi zanimiv)
 bet_spread <- function(true_count) {
