@@ -16,6 +16,17 @@ res <- simulate_with_shoe(N = 1000, n_decks = 6,
 res$EV
 res$CI95
 
+set.seed(2025)
+res_no_split <- simulate_with_shoe(N = 1000, n_decks = 6,
+                          penetration = 0.75,
+                          hit_soft_17 = FALSE,
+                          bet = 1,
+                          payout_bj = 1.5,
+                          can_split = FALSE)
+res_no_split$EV
+res_no_split$CI95
+
+
 res1 <- simulate_with_shoe_hilo(N = 1000, n_decks = 6,
                                penetration = 0.75,
                                hit_soft_17 = FALSE,
