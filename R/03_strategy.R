@@ -2,6 +2,8 @@
 BS_TABLE_S17 <- read.csv("basic_strategy.csv", stringsAsFactors = FALSE)
 BS_TABLE_H17 <- read.csv("basic_strategy_H17.csv", stringsAsFactors = FALSE) #ahhh se zato rabm implementirat v basic_action_bs, da se spreminja glede na S17/H17 pravila delivca...odv od TRUE/FALSE
 
+BS_TABLE_CURRENT <- BS_TABLE_S17  # default
+
 # Bet spread glede na Hi-Lo true count (kle se lah tut mal igram pa se visje stave delam 12, 16,... bo kasneje k bom metrike zbirou mejbi zanimiv)
 bet_spread <- function(true_count) {
   tc <- floor(true_count[1])  # delamo z zaokroženim navzdol---tc je vektor hah
@@ -59,7 +61,7 @@ basic_action_bs <- function(player_vals,
                             dealer_up,
                             can_double = TRUE,
                             can_split  = FALSE,
-                            bs_table  = BS_TABLE_S17 ) {
+                            bs_table  = BS_TABLE_CURRENT ) {
   # 1) klasifikacija roke
   cl <- classify_hand(player_vals, can_split = can_split)
   

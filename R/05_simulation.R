@@ -16,6 +16,12 @@ simulate_with_shoe <- function(N = 1e5,
                                hit_soft_17 = FALSE,
                                bet = 1,
                                payout_bj = 1.5) {
+  # izberi pravo strategijo za igralca glede na pravila delivca
+  if (isTRUE(hit_soft_17)) {
+    BS_TABLE_CURRENT <<- BS_TABLE_H17
+  } else {
+    BS_TABLE_CURRENT <<- BS_TABLE_S17
+  }
   shoe <- init_shoe(n_decks = n_decks, penetration = penetration)
   
   gains        <- numeric(N)
@@ -115,6 +121,12 @@ simulate_with_shoe_hilo <- function(N = 1e5,
                                     hit_soft_17 = FALSE,
                                     bet = 1,
                                     payout_bj = 1.5) {
+  # izberi pravo strategijo za igralca glede na pravila delivca
+  if (isTRUE(hit_soft_17)) {
+    BS_TABLE_CURRENT <<- BS_TABLE_H17
+  } else {
+    BS_TABLE_CURRENT <<- BS_TABLE_S17
+  }
   shoe <- init_shoe(n_decks = n_decks, penetration = penetration)
   
   gains        <- numeric(N)
