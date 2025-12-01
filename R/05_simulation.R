@@ -15,7 +15,10 @@ simulate_with_shoe <- function(N = 1e5,
                                penetration = 0.75,
                                hit_soft_17 = FALSE,
                                bet = 1,
-                               payout_bj = 1.5) {
+                               payout_bj = 1.5,
+                               can_double = TRUE,
+                               can_split = TRUE,
+                               can_surrender = TRUE) {
   # izberi pravo strategijo za igralca glede na pravila delivca
   if (isTRUE(hit_soft_17)) {
     BS_TABLE_CURRENT <<- BS_TABLE_H17
@@ -36,10 +39,13 @@ simulate_with_shoe <- function(N = 1e5,
     shoe <- maybe_reshuffle(shoe)  # preveri cut pred vsako roko
     
     res <- deal_hand_from_shoe(
-      shoe        = shoe,
-      hit_soft_17 = hit_soft_17,
-      bet         = bet,
-      payout_bj   = payout_bj
+      shoe          = shoe,
+      hit_soft_17   = hit_soft_17,
+      bet           = bet,
+      payout_bj     = payout_bj,
+      can_double    = can_double,
+      can_split     = can_split,
+      can_surrender = can_surrender
     )
     
     gains[i]       <- res$gain
@@ -74,7 +80,6 @@ simulate_with_shoe <- function(N = 1e5,
   bankroll <- cumsum(gains)
   dd       <- cummax(bankroll) - bankroll
   max_drawdown <- max(dd)   # največji absolutni padec
-  
   
   list(
     # osnovne metrike
@@ -114,13 +119,17 @@ simulate_with_shoe <- function(N = 1e5,
 }
 
 
+
 # MONTE CARLO preko istega SHOE z Hi-Lo štetjem  + bet spread
 simulate_with_shoe_hilo <- function(N = 1e5,
                                     n_decks = 6,
                                     penetration = 0.75,
                                     hit_soft_17 = FALSE,
                                     bet = 1,
-                                    payout_bj = 1.5) {
+                                    payout_bj = 1.5,
+                                    can_double = TRUE,
+                                    can_split = TRUE,
+                                    can_surrender = TRUE) {
   # izberi pravo strategijo za igralca glede na pravila delivca
   if (isTRUE(hit_soft_17)) {
     BS_TABLE_CURRENT <<- BS_TABLE_H17
@@ -167,6 +176,9 @@ simulate_with_shoe_hilo <- function(N = 1e5,
       hit_soft_17   = hit_soft_17,
       bet           = bet_i,
       payout_bj     = payout_bj,
+      can_double    = can_double,
+      can_split     = can_split,
+      can_surrender = can_surrender,
       verbose       = FALSE
     )
     
@@ -205,14 +217,12 @@ simulate_with_shoe_hilo <- function(N = 1e5,
   dd       <- cummax(bankroll) - bankroll
   max_drawdown <- max(dd)   # največji absolutni padec
   
-  
   # ROI in EV na 100 iger
   total_bet <- sum(bet_s)
   ROI       <- if (total_bet > 0) sum(gains) / total_bet else NA_real_
   EV_100    <- 100 * mu
   
   # EV po true count (za graf)
-  # zaokrožimo TC in naredimo pogojno pričakovano vrednost
   tc_round <- round(true_cnt)
   EV_by_TC <- tapply(gains, tc_round, mean)
   
@@ -263,4 +273,5 @@ simulate_with_shoe_hilo <- function(N = 1e5,
     doubled      = doubled
   )
 }
+
 

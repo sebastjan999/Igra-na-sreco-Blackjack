@@ -157,7 +157,13 @@ simulate_hand <- function(n_decks = 6, hit_soft_17 = FALSE, bet = 1, payout_bj =
 }
 
 # ENA IGRA IZ OBSTOJEČEGA SHOE (z BJ in double)
-deal_hand_from_shoe <- function(shoe, hit_soft_17 = FALSE, bet = 1, payout_bj = 1.5) {
+deal_hand_from_shoe <- function(shoe,
+                                hit_soft_17 = FALSE,
+                                bet = 1,
+                                payout_bj = 1.5,
+                                can_double = TRUE,
+                                can_split = TRUE,
+                                can_surrender = TRUE) {
   # poskrbi za dovolj kart za začetno deljenje
   slice <- shoe_slice_df(shoe)
   if (nrow(slice) < 4) { shoe <- maybe_reshuffle(shoe); slice <- shoe_slice_df(shoe) }
@@ -190,19 +196,26 @@ deal_hand_from_shoe <- function(shoe, hit_soft_17 = FALSE, bet = 1, payout_bj = 
     ))
   }
   
-  # Igralec odigra (iz trenutnega shoe) #popravek 18.11 :)
+  # Igralec odigra (iz trenutnega shoe)
   slice <- shoe_slice_df(shoe)
   pl <- play_player_from_hand(
     start_hand = player_start,
     shoe       = slice,
     up_card    = up,
-    strategy   = function(hand, upc, can_double = TRUE, can_split = FALSE, ...) {
-      basic_action_bs(
+    strategy   = function(hand, upc, can_double_hand = TRUE, can_split_hand = FALSE, ...) {
+      # efektivno: globalni & lokalni (npr. po prvih dveh kartah še dovoli double)
+      eff_double <- can_double && can_double_hand
+      eff_split  <- can_split  && can_split_hand
+      
+      action <- basic_action_bs(
         player_vals = hand,
         dealer_up   = upc,
-        can_double  = can_double,
-        can_split   = can_split
+        can_double  = eff_double,
+        can_split   = eff_split,
+        can_surrender  = can_surrender
       )
+      
+      action
     },
     verbose    = FALSE
   )
@@ -271,6 +284,9 @@ deal_hand_from_shoe_hilo <- function(shoe, running_count,
                                      hit_soft_17 = FALSE,
                                      bet = 1,
                                      payout_bj = 1.5,
+                                     can_double = TRUE,
+                                     can_split = TRUE,
+                                     can_surrender = TRUE,
                                      verbose = FALSE) {
   if (verbose) {
     cat("\n=== NEW HAND (Hi-Lo) ===\n")
@@ -325,23 +341,29 @@ deal_hand_from_shoe_hilo <- function(shoe, running_count,
     ))
   }
   
-  # Igralec odigra iz trenutnega shoe, z znano začetno roko
+# Igralec odigra (iz trenutnega shoe)
   slice <- shoe_slice_df(shoe)
   pl <- play_player_from_hand(
     start_hand = player_start,
     shoe       = slice,
     up_card    = up,
-    strategy   = function(hand, upc, can_double = TRUE, can_split = FALSE, ...) {
-      basic_action_bs(
+    strategy   = function(hand, upc, can_double_hand = TRUE, can_split_hand = FALSE, ...) {
+      # efektivno: globalni & lokalni (npr. po prvih dveh kartah še dovoli double)
+      eff_double <- can_double && can_double_hand
+      eff_split  <- can_split  && can_split_hand
+      
+      action <- basic_action_bs(
         player_vals = hand,
         dealer_up   = upc,
-        can_double  = can_double,
-        can_split   = can_split
+        can_double  = eff_double,
+        can_split   = eff_split,
+        can_surrender  = can_surrender
       )
+      
+      action
     },
-    verbose    = verbose
+    verbose    = FALSE
   )
-  
   shoe <- advance_shoe(shoe, pl$next_idx - 1)
   
   # Hi-Lo: dodatne karte igralca (po začetnih dveh)

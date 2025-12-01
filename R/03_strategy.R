@@ -61,11 +61,11 @@ basic_action_bs <- function(player_vals,
                             dealer_up,
                             can_double = TRUE,
                             can_split  = FALSE,
+                            can_surrender = TRUE,
                             bs_table  = BS_TABLE_CURRENT ) {
   # 1) klasifikacija roke
   cl <- classify_hand(player_vals, can_split = can_split)
   
-  # da ne kolidira z imenom stolpca:
   dealer_val <- dealer_up
   
   # 2) izberemo ustrezne vrstice iz tabele
@@ -104,7 +104,10 @@ basic_action_bs <- function(player_vals,
                    } else {
                      if (total >= 17) "stand" else "hit"
                    },
-                   "R" = "surrender",
+                   "R"  = if (can_surrender) "surrender" else {
+                     # fallback ko surrender NI dovoljen
+                     if (total >= 17) "stand" else "hit"
+                   },
                    "hit"
   )
   
