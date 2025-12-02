@@ -19,7 +19,7 @@ dealer_play <- function(shoe, up, hole, hit_soft_17 = FALSE) {
 # Igralčev potek roke (brez splitov, demo) ----------------------
 play_player <- function(shoe, up_card, strategy = basic_action) {
   idx <- 1 #stevec naslednje karte v kupcku
-  player <- c(shoe$val[idx], shoe$val[idx+1]); idx <- idx + 2 #damo mu 2 karti iz dekq
+  player <- c(shoe$val[idx], shoe$val[idx+1]); idx <- idx + 2 #damo mu 2 karti iz deka
   action_hist <- c() #zgodovina potez
   doubled <- FALSE
   
@@ -156,6 +156,26 @@ simulate_hand <- function(n_decks = 6, hit_soft_17 = FALSE, bet = 1, payout_bj =
   res
 }
 
+#helper za Izračuna dobiček ene igralčeve roke proti delivcu(need for split)
+hand_gain_vs_dealer <- function(player_value, dealer_value, bet, doubled_flag) {
+  # Če dealer sploh ni igral (NA), privzamemo 0 prispevek
+  if (is.na(dealer_value)) return(0)
+  
+  bet_mult <- if (isTRUE(doubled_flag)) 2 else 1
+  
+  if (dealer_value > 21) {
+    return(bet * bet_mult)
+  }
+  if (player_value > dealer_value) {
+    return(bet * bet_mult)
+  }
+  if (player_value < dealer_value) {
+    return(-bet * bet_mult)
+  }
+  return(0)
+}
+
+
 # ENA IGRA IZ OBSTOJEČEGA SHOE (z BJ in double)
 deal_hand_from_shoe <- function(shoe,
                                 hit_soft_17 = FALSE,
@@ -196,6 +216,130 @@ deal_hand_from_shoe <- function(shoe,
     ))
   }
   
+  ### [NEW] SPLIT LOGIC: preveri, če naj začetno roko splitemo
+  # (enkratni split, brez re-splita)
+  initial_action <- basic_action_bs(
+    player_vals    = player_start,
+    dealer_up      = up,
+    can_double     = can_double,
+    can_split      = can_split,
+    can_surrender  = can_surrender,
+    bs_table       = BS_TABLE_CURRENT
+  )
+  
+  if (initial_action == "split" && can_split) {
+    # nardimo 2 roki: (p1, nova karta), (p2, nova karta)
+    slice2 <- shoe_slice_df(shoe)
+    if (nrow(slice2) < 2) {
+      shoe   <- maybe_reshuffle(shoe)
+      slice2 <- shoe_slice_df(shoe)
+    }
+    
+    new1 <- slice2$val[1]
+    new2 <- slice2$val[2]
+    shoe <- advance_shoe(shoe, 2)
+    
+    hand1_start <- c(p1, new1)
+    hand2_start <- c(p2, new2)
+    
+    # hand1
+    slice_h1 <- shoe_slice_df(shoe)
+    pl1 <- play_player_from_hand(
+      start_hand = hand1_start,
+      shoe       = slice_h1,
+      up_card    = up,
+      strategy   = function(hand, upc, can_double_hand = TRUE, ...) {
+        eff_double <- can_double && can_double_hand
+        basic_action_bs(
+          player_vals    = hand,
+          dealer_up      = upc,
+          can_double     = eff_double,
+          can_split      = FALSE,          # NE dovolimo re-splita
+          can_surrender  = can_surrender,
+          bs_table       = BS_TABLE_CURRENT
+        )
+      },
+      verbose    = FALSE
+    )
+    shoe <- advance_shoe(shoe, pl1$next_idx - 1)
+    
+    # hand2
+    slice_h2 <- shoe_slice_df(shoe)
+    pl2 <- play_player_from_hand(
+      start_hand = hand2_start,
+      shoe       = slice_h2,
+      up_card    = up,
+      strategy   = function(hand, upc, can_double_hand = TRUE, ...) {
+        eff_double <- can_double && can_double_hand
+        basic_action_bs(
+          player_vals    = hand,
+          dealer_up      = upc,
+          can_double     = eff_double,
+          can_split      = FALSE,          # NE dovolimo re-splita
+          can_surrender  = can_surrender,
+          bs_table       = BS_TABLE_CURRENT
+        )
+      },
+      verbose    = FALSE
+    )
+    shoe <- advance_shoe(shoe, pl2$next_idx - 1)
+    
+    # Če sta obe roki bust/surrender, dealer sploh ne rabi igrat, ampak za enostavnost:
+    # - če vsaj ena roka še stoji, delivec igra normalno
+    need_dealer <- !(pl1$value > 21 && pl2$value > 21) &&
+      !(pl1$surrendered && pl2$surrendered)
+    
+    if (need_dealer) {
+      slice_d <- shoe_slice_df(shoe)
+      dl <- dealer_play(slice_d, up = up, hole = hole, hit_soft_17 = hit_soft_17)
+      shoe <- advance_shoe(shoe, dl$next_idx - 1)
+      dv <- dl$value
+    } else {
+      dv <- NA_integer_
+    }
+    
+    # izračun dobička za obe roki
+    gain1 <- 0
+    gain2 <- 0
+    
+    # hand1
+    if (pl1$surrendered) {
+      bet_mult1 <- if (isTRUE(pl1$doubled)) 2 else 1
+      gain1 <- -0.5 * bet_mult1 * bet
+    } else if (pl1$value > 21) {
+      bet_mult1 <- if (isTRUE(pl1$doubled)) 2 else 1
+      gain1 <- -bet_mult1 * bet
+    } else if (!is.na(dv)) {
+      gain1 <- hand_gain_vs_dealer(pl1$value, dv, bet, pl1$doubled)
+    }
+    
+    # hand2
+    if (pl2$surrendered) {
+      bet_mult2 <- if (isTRUE(pl2$doubled)) 2 else 1
+      gain2 <- -0.5 * bet_mult2 * bet
+    } else if (pl2$value > 21) {
+      bet_mult2 <- if (isTRUE(pl2$doubled)) 2 else 1
+      gain2 <- -bet_mult2 * bet
+    } else if (!is.na(dv)) {
+      gain2 <- hand_gain_vs_dealer(pl2$value, dv, bet, pl2$doubled)
+    }
+    
+    gain_total <- gain1 + gain2
+    
+    return(list(
+      gain         = gain_total,
+      shoe         = shoe,
+      player_bj    = FALSE,
+      dealer_bj    = FALSE,
+      player_bust  = (pl1$value > 21 || pl2$value > 21),
+      dealer_bust  = (!is.na(dv) && dv > 21),
+      surrendered  = (pl1$surrendered || pl2$surrendered),
+      doubled      = (pl1$doubled || pl2$doubled)
+    ))
+  }
+  ### [END SPLIT LOGIC]
+  
+  # ===== če NI splita, nadaljujemo po stari logiki =====
   # Igralec odigra (iz trenutnega shoe)
   slice <- shoe_slice_df(shoe)
   pl <- play_player_from_hand(
@@ -340,6 +484,153 @@ deal_hand_from_shoe_hilo <- function(shoe, running_count,
       doubled       = FALSE
     ))
   }
+  
+  ### --- [NEW] SPLIT LOGIC (Hi-Lo) ---
+  initial_action <- basic_action_bs(
+    player_vals    = player_start,
+    dealer_up      = up,
+    can_double     = can_double,
+    can_split      = can_split,
+    can_surrender  = can_surrender,
+    bs_table       = BS_TABLE_CURRENT
+  )
+  
+  if (initial_action == "split" && can_split) {
+    
+    # nove karte za split roki
+    slice2 <- shoe_slice_df(shoe)
+    if (nrow(slice2) < 2) {
+      shoe  <- maybe_reshuffle(shoe)
+      slice2 <- shoe_slice_df(shoe)
+      running_count <- 0L
+    }
+    
+    new1 <- slice2$val[1]
+    new2 <- slice2$val[2]
+    shoe <- advance_shoe(shoe, 2)
+    
+    # Hi-Lo: dodaj delta za novi karti
+    running_count <- running_count + sum(hi_lo_delta(c(new1, new2)))
+    
+    hand1_start <- c(p1, new1)
+    hand2_start <- c(p2, new2)
+    
+    # --- HAND 1 ---
+    slice_h1 <- shoe_slice_df(shoe)
+    pl1 <- play_player_from_hand(
+      start_hand = hand1_start,
+      shoe       = slice_h1,
+      up_card    = up,
+      strategy   = function(hand, upc, can_double_hand = TRUE, ...) {
+        eff_double <- can_double && can_double_hand
+        basic_action_bs(
+          player_vals    = hand,
+          dealer_up      = upc,
+          can_double     = eff_double,
+          can_split      = FALSE,         # brez re-splita
+          can_surrender  = can_surrender,
+          bs_table       = BS_TABLE_CURRENT
+        )
+      },
+      verbose    = FALSE
+    )
+    shoe <- advance_shoe(shoe, pl1$next_idx - 1)
+    
+    # Hi-Lo: dodatne karte hand1 (nad začetnima dvema)
+    if (length(pl1$cards) > 2) {
+      extra1 <- pl1$cards[3:length(pl1$cards)]
+      running_count <- running_count + sum(hi_lo_delta(extra1))
+    }
+    
+    # --- HAND 2 ---
+    slice_h2 <- shoe_slice_df(shoe)
+    pl2 <- play_player_from_hand(
+      start_hand = hand2_start,
+      shoe       = slice_h2,
+      up_card    = up,
+      strategy   = function(hand, upc, can_double_hand = TRUE, ...) {
+        eff_double <- can_double && can_double_hand
+        basic_action_bs(
+          player_vals    = hand,
+          dealer_up      = upc,
+          can_double     = eff_double,
+          can_split      = FALSE,
+          can_surrender  = can_surrender,
+          bs_table       = BS_TABLE_CURRENT
+        )
+      },
+      verbose    = FALSE
+    )
+    shoe <- advance_shoe(shoe, pl2$next_idx - 1)
+    
+    # Hi-Lo: dodatne karte hand2
+    if (length(pl2$cards) > 2) {
+      extra2 <- pl2$cards[3:length(pl2$cards)]
+      running_count <- running_count + sum(hi_lo_delta(extra2))
+    }
+    
+    # Ali moramo sploh igrati dealerja?
+    need_dealer <-
+      !(pl1$value > 21 || pl1$surrendered) ||
+      !(pl2$value > 21 || pl2$surrendered)
+    
+    if (need_dealer) {
+      slice_d <- shoe_slice_df(shoe)
+      dl <- dealer_play(slice_d, up = up, hole = hole, hit_soft_17 = hit_soft_17)
+      shoe <- advance_shoe(shoe, dl$next_idx - 1)
+      
+      # Hi-Lo: dodatne karte delivca
+      if (length(dl$cards) > 2) {
+        extraD <- dl$cards[3:length(dl$cards)]
+        running_count <- running_count + sum(hi_lo_delta(extraD))
+      }
+      
+      dv <- dl$value
+    } else {
+      dv <- NA_integer_
+    }
+    
+    # --- IZRAČUN DOBIČKA ZA OBE ROKI ---
+    gain1 <- 0
+    gain2 <- 0
+    
+    # hand 1
+    if (pl1$surrendered) {
+      bet_mult1 <- if (isTRUE(pl1$doubled)) 2 else 1
+      gain1 <- -0.5 * bet_mult1 * bet
+    } else if (pl1$value > 21) {
+      bet_mult1 <- if (isTRUE(pl1$doubled)) 2 else 1
+      gain1 <- -bet_mult1 * bet
+    } else if (!is.na(dv)) {
+      gain1 <- hand_gain_vs_dealer(pl1$value, dv, bet, pl1$doubled)
+    }
+    
+    # hand 2
+    if (pl2$surrendered) {
+      bet_mult2 <- if (isTRUE(pl2$doubled)) 2 else 1
+      gain2 <- -0.5 * bet_mult2 * bet
+    } else if (pl2$value > 21) {
+      bet_mult2 <- if (isTRUE(pl2$doubled)) 2 else 1
+      gain2 <- -bet_mult2 * bet
+    } else if (!is.na(dv)) {
+      gain2 <- hand_gain_vs_dealer(pl2$value, dv, bet, pl2$doubled)
+    }
+    
+    gain_total <- gain1 + gain2
+    
+    return(list(
+      gain          = gain_total,
+      shoe          = shoe,
+      running_count = running_count,
+      player_bj     = FALSE,
+      dealer_bj     = FALSE,
+      player_bust   = (pl1$value > 21 || pl2$value > 21),
+      dealer_bust   = (!is.na(dv) && dv > 21),
+      surrendered   = (pl1$surrendered || pl2$surrendered),
+      doubled       = (pl1$doubled || pl2$doubled)
+    ))
+  }
+  ### --- END SPLIT LOGIC ---
   
 # Igralec odigra (iz trenutnega shoe)
   slice <- shoe_slice_df(shoe)

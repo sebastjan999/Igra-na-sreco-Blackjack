@@ -114,5 +114,19 @@ res2_no_split_no_surr_no_doub <- simulate_with_shoe_hilo(N = 1000, n_decks = 6,
                                                          can_split = FALSE,
                                                          can_surrender = FALSE)
 
+
 res2_no_split_no_surr_no_doub$EV
 res2_no_split_no_surr_no_doub$CI95
+
+
+
+
+
+set.seed(2025)
+res_split <- simulate_with_shoe_hilo(N = 2000, can_split = TRUE)
+
+set.seed(2025)
+res_no_split <- simulate_with_shoe_hilo(N = 2000, can_split = FALSE)
+
+res_split$EV
+res_no_split$EV
