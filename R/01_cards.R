@@ -1,4 +1,3 @@
-# 0) Osnova: karte, vrednosti, vrednost roke -----------------------------
 #Za hrajenje n kupčkov kart
 make_deck <- function(n_decks = 6) {
   ranks <- c(2:10, "J","Q","K","A")

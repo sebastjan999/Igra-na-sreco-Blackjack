@@ -60,6 +60,7 @@ simulate_with_shoe <- function(N = 1e5,
   
   # osnovne statistike
   mu  <- mean(gains)
+  he  <- -mu
   v   <- var(gains)
   s   <- sd(gains)
   se  <- s / sqrt(N)
@@ -85,6 +86,7 @@ simulate_with_shoe <- function(N = 1e5,
     # osnovne metrike
     N          = N,
     EV         = mu,
+    HE         = he,
     Var        = v,
     SD         = s,
     SE         = se,
@@ -196,6 +198,7 @@ simulate_with_shoe_hilo <- function(N = 1e5,
   
   # osnovne statistike
   mu  <- mean(gains)
+  he  <- -mu
   v   <- var(gains)
   s   <- sd(gains)
   se  <- s / sqrt(N)
@@ -204,6 +207,12 @@ simulate_with_shoe_hilo <- function(N = 1e5,
   win_rate  <- mean(gains > 0)
   loss_rate <- mean(gains < 0)
   push_rate <- mean(gains == 0)
+  
+  # povprečna stava na roko
+  avg_bet_per_hand <- mean(bet_s)
+  
+  # house edge na enoto stave (kot v literaturi)
+  HE_per_bet <- if (avg_bet_per_hand > 0) mu / avg_bet_per_hand else NA_real_
   
   bj_rate_player   <- mean(bj_player)
   bj_rate_dealer   <- mean(bj_dealer)
@@ -230,6 +239,7 @@ simulate_with_shoe_hilo <- function(N = 1e5,
     # osnovne metrike
     N          = N,
     EV         = mu,
+    HE         = he,
     Var        = v,
     SD         = s,
     SE         = se,
@@ -240,6 +250,9 @@ simulate_with_shoe_hilo <- function(N = 1e5,
     win_rate   = win_rate,
     loss_rate  = loss_rate,
     push_rate  = push_rate,
+    
+    avg_bet_per_hand = avg_bet_per_hand,
+    HE_per_bet       = HE_per_bet,
     
     # posebni eventi
     bj_rate_player   = bj_rate_player,
