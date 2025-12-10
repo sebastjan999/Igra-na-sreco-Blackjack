@@ -7,11 +7,67 @@ source("R/04_play_hand.R")
 source("R/05_simulation.R")
 source("R/06_experiments.R")
 
+#=======================HELPER FUNK ZA SKUPNI DF PO SIMULACIJAH============================================
+make_row <- function(
+    name,                # ime scenarija (npr. "demo_basic", "hilo_S17")
+    strategy,            # "demo", "basic", "hilo"
+    res,                 # seznam ki ga vrne simulacija
+    N,
+    n_decks,
+    penetration = NA_real_,
+    hit_soft_17 = NA,
+    payout_bj   = NA_real_,
+    can_double  = NA,
+    can_split   = NA,
+    can_surrender = NA
+) {
+  # pravilo delivca kot string
+  rule <- if (is.na(hit_soft_17)) NA_character_
+  else if (isTRUE(hit_soft_17)) "H17" else "S17"
+  
+  data.frame(
+    scenario      = name,         # ime scenarija
+    strategy      = strategy,     # demo / basic / hilo
+    N             = N,
+    n_decks       = n_decks,
+    penetration   = penetration,
+    rule          = rule,
+    payout_bj     = payout_bj,
+    can_double    = can_double,
+    can_split     = can_split,
+    can_surrender = can_surrender,
+    
+    # osnovne metrike (če jih ni v res, damo NA)
+    EV        = if (!is.null(res$EV)) res$EV else NA_real_,
+    SE        = if (!is.null(res$SE)) res$SE else NA_real_,
+    HE        = if (!is.null(res$HE)) res$HE else 
+      if (!is.null(res$HE_per_hand)) res$HE_per_hand else NA_real_,
+    ROI       = if (!is.null(res$ROI)) res$ROI else NA_real_,
+    
+    win_rate   = if (!is.null(res$win_rate)) res$win_rate else NA_real_,
+    loss_rate  = if (!is.null(res$loss_rate)) res$loss_rate else NA_real_,
+    push_rate  = if (!is.null(res$push_rate)) res$push_rate else NA_real_,
+    
+    bj_rate_player   = if (!is.null(res$bj_rate_player)) res$bj_rate_player else NA_real_,
+    bj_rate_dealer   = if (!is.null(res$bj_rate_dealer)) res$bj_rate_dealer else NA_real_,
+    surrender_rate   = if (!is.null(res$surrender_rate)) res$surrender_rate else NA_real_,
+    player_bust_rate = if (!is.null(res$player_bust_rate)) res$player_bust_rate else NA_real_,
+    dealer_bust_rate = if (!is.null(res$dealer_bust_rate)) res$dealer_bust_rate else NA_real_,
+    double_rate      = if (!is.null(res$double_rate)) res$double_rate else NA_real_,
+    
+    avg_bet_per_hand = if (!is.null(res$avg_bet_per_hand)) res$avg_bet_per_hand else NA_real_,
+    max_drawdown     = if (!is.null(res$max_drawdown)) res$max_drawdown else NA_real_
+  )
+}
+
+#=========================================================================================================
+
+#==================================ZAČETEK SIMULACIJ=====================================================0
 
 # -----------------------------------------------------------------------------
 #  1.) Primerjava 3eh strategij z istimi pravili
 # -----------------------------------------------------------------------------
-N = 10000
+N = 100
 set.seed(1)
 
 # 1) Demo/naključna simulacija (simulate_n + simulate_hand)
@@ -139,7 +195,7 @@ data.frame(
 #a) DOUBLE ON/OFF
 set.seed(4)
 
-res_basic_split_on <- simulate_with_shoe(
+res_basic_double_on <- simulate_with_shoe(
   N            = N,
   n_decks      = 6,
   penetration  = 0.75,
@@ -152,7 +208,7 @@ res_basic_split_on <- simulate_with_shoe(
 )
 
 set.seed(4)
-res_basic_split_off <- simulate_with_shoe(
+res_basic_double_off <- simulate_with_shoe(
   N            = N,
   n_decks      = 6,
   penetration  = 0.75,
@@ -165,9 +221,9 @@ res_basic_split_off <- simulate_with_shoe(
 )
 
 data.frame(
-  split = c("ON", "OFF"),
-  EV    = c(res_basic_split_on$EV, res_basic_split_off$EV),
-  SE    = c(res_basic_split_on$SE, res_basic_split_off$SE)
+  double = c("ON", "OFF"),
+  EV    = c(res_basic_double_on$EV, res_basic_double_off$EV),
+  SE    = c(res_basic_double_on$SE, res_basic_double_off$SE)
 )
 
 #b) CAN SURRENDER ON/OFF
@@ -381,7 +437,7 @@ df_hilo_pen <- data.frame(
   penetration = penetracije,
   EV          = sapply(res_hilo_pen, `[[`, "EV"),
   HE          = sapply(res_hilo_pen, `[[`, "HE"),   # house edge per bet
-  HE_per_hand = sapply(res_hilo_pen, `[[`, "HE_per_hand"),   # house edge per bet
+  HE_per_hand = sapply(res_hilo_pen, `[[`, "HE_per_hand"),   # house edge per hand
   ROI         = sapply(res_hilo_pen, `[[`, "ROI")   # player ROI
 )
 
@@ -416,8 +472,328 @@ ev_tc_df <- data.frame(
 
 ev_tc_df
 
+#=======================================================================================================
+
+# Zbiramo vse scenarije v en seznam
+rows <- list()
+
+k <- 1
+
+# 1.) Primerjava 3 strategij
+rows[[k]] <- make_row(
+  name          = "demo_random",
+  strategy      = "demo",
+  res           = res_demo,
+  N             = N,
+  n_decks       = 6,
+  penetration   = NA,
+  hit_soft_17   = FALSE,
+  payout_bj     = 1.5,
+  can_double    = TRUE,
+  can_split     = FALSE,
+  can_surrender = TRUE
+); k <- k + 1
+
+rows[[k]] <- make_row(
+  name          = "basic_S17",
+  strategy      = "basic",
+  res           = res_basic,
+  N             = N,
+  n_decks       = 6,
+  penetration   = 0.75,
+  hit_soft_17   = FALSE,
+  payout_bj     = 1.5,
+  can_double    = TRUE,
+  can_split     = FALSE,
+  can_surrender = TRUE
+); k <- k + 1
+
+rows[[k]] <- make_row(
+  name          = "hilo_S17",
+  strategy      = "hilo",
+  res           = res_hilo,
+  N             = N,
+  n_decks       = 6,
+  penetration   = 0.75,
+  hit_soft_17   = FALSE,
+  payout_bj     = 1.5,
+  can_double    = TRUE,
+  can_split     = FALSE,
+  can_surrender = TRUE
+); k <- k + 1
 
 
+# 2.) S17 vs H17 – basic
+rows[[k]] <- make_row(
+  name          = "basic_S17_rule",
+  strategy      = "basic",
+  res           = res_basic_S17,
+  N             = N,
+  n_decks       = 6,
+  penetration   = 0.75,
+  hit_soft_17   = FALSE,
+  payout_bj     = 1.5,
+  can_double    = TRUE,
+  can_split     = FALSE,
+  can_surrender = TRUE
+); k <- k + 1
+
+rows[[k]] <- make_row(
+  name          = "basic_H17_rule",
+  strategy      = "basic",
+  res           = res_basic_H17,
+  N             = N,
+  n_decks       = 6,
+  penetration   = 0.75,
+  hit_soft_17   = TRUE,
+  payout_bj     = 1.5,
+  can_double    = TRUE,
+  can_split     = FALSE,
+  can_surrender = TRUE
+); k <- k + 1
+
+# 2.) S17 vs H17 – Hi-Lo
+rows[[k]] <- make_row(
+  name          = "hilo_S17_rule",
+  strategy      = "hilo",
+  res           = res_hilo_S17,
+  N             = N,
+  n_decks       = 6,
+  penetration   = 0.75,
+  hit_soft_17   = FALSE,
+  payout_bj     = 1.5,
+  can_double    = TRUE,
+  can_split     = FALSE,
+  can_surrender = TRUE
+); k <- k + 1
+
+rows[[k]] <- make_row(
+  name          = "hilo_H17_rule",
+  strategy      = "hilo",
+  res           = res_hilo_H17,
+  N             = N,
+  n_decks       = 6,
+  penetration   = 0.75,
+  hit_soft_17   = TRUE,
+  payout_bj     = 1.5,
+  can_double    = TRUE,
+  can_split     = FALSE,
+  can_surrender = TRUE
+); k <- k + 1
+
+
+# 3.) Vpliv igralčevih pravil – basic
+
+# double ON/OFF
+rows[[k]] <- make_row(
+  name          = "basic_double_ON",
+  strategy      = "basic",
+  res           = res_basic_double_on,
+  N             = N,
+  n_decks       = 6,
+  penetration   = 0.75,
+  hit_soft_17   = FALSE,
+  payout_bj     = 1.5,
+  can_double    = TRUE,
+  can_split     = FALSE,
+  can_surrender = TRUE
+); k <- k + 1
+
+rows[[k]] <- make_row(
+  name          = "basic_double_OFF",
+  strategy      = "basic",
+  res           = res_basic_double_off,
+  N             = N,
+  n_decks       = 6,
+  penetration   = 0.75,
+  hit_soft_17   = FALSE,
+  payout_bj     = 1.5,
+  can_double    = FALSE,
+  can_split     = FALSE,
+  can_surrender = TRUE
+); k <- k + 1
+
+
+# surrender ON/OFF
+rows[[k]] <- make_row(
+  name          = "basic_surrender_ON",
+  strategy      = "basic",
+  res           = res_basic_R_on,
+  N             = N,
+  n_decks       = 6,
+  penetration   = 0.75,
+  hit_soft_17   = FALSE,
+  payout_bj     = 1.5,
+  can_double    = TRUE,
+  can_split     = FALSE,
+  can_surrender = TRUE
+); k <- k + 1
+
+rows[[k]] <- make_row(
+  name          = "basic_surrender_OFF",
+  strategy      = "basic",
+  res           = res_basic_R_off,
+  N             = N,
+  n_decks       = 6,
+  penetration   = 0.75,
+  hit_soft_17   = FALSE,
+  payout_bj     = 1.5,
+  can_double    = TRUE,
+  can_split     = FALSE,
+  can_surrender = FALSE
+); k <- k + 1
+
+
+# split ON/OFF
+rows[[k]] <- make_row(
+  name          = "basic_split_ON",
+  strategy      = "basic",
+  res           = res_basic_split_on,  
+  N             = N,
+  n_decks       = 6,
+  penetration   = 0.75,
+  hit_soft_17   = FALSE,
+  payout_bj     = 1.5,
+  can_double    = TRUE,
+  can_split     = TRUE,
+  can_surrender = TRUE
+); k <- k + 1
+
+rows[[k]] <- make_row(
+  name          = "basic_split_OFF",
+  strategy      = "basic",
+  res           = res_basic_split_off, 
+  N             = N,
+  n_decks       = 6,
+  penetration   = 0.75,
+  hit_soft_17   = FALSE,
+  payout_bj     = 1.5,
+  can_double    = TRUE,
+  can_split     = FALSE,
+  can_surrender = TRUE
+); k <- k + 1
+
+
+# 4.) Blackjack payout 3:2 vs 6:5 (basic)
+rows[[k]] <- make_row(
+  name          = "basic_BJ_3to2",
+  strategy      = "basic",
+  res           = res_basic_3to2,
+  N             = N,
+  n_decks       = 6,
+  penetration   = 0.75,
+  hit_soft_17   = FALSE,
+  payout_bj     = 1.5,
+  can_double    = TRUE,
+  can_split     = FALSE,
+  can_surrender = TRUE
+); k <- k + 1
+
+rows[[k]] <- make_row(
+  name          = "basic_BJ_6to5",
+  strategy      = "basic",
+  res           = res_basic_6to5,
+  N             = N,
+  n_decks       = 6,
+  penetration   = 0.75,
+  hit_soft_17   = FALSE,
+  payout_bj     = 1.2,
+  can_double    = TRUE,
+  can_split     = FALSE,
+  can_surrender = TRUE
+); k <- k + 1
+
+for (j in seq_along(penetracije)) {
+  pen <- penetracije[j]
+  res_pen <- res_hilo_pen[[j]]
+  
+  rows[[k]] <- make_row(
+    name          = paste0("hilo_pen_", pen),
+    strategy      = "hilo",
+    res           = res_pen,
+    N             = N,
+    n_decks       = 6,
+    penetration   = pen,
+    hit_soft_17   = FALSE,
+    payout_bj     = 1.5,
+    can_double    = TRUE,
+    can_split     = FALSE,
+    can_surrender = TRUE
+  )
+  k <- k + 1
+}
+
+rows[[k]] <- make_row(
+  name          = "hilo_double_ON",
+  strategy      = "hilo",
+  res           = res_hilo_double_on,
+  N             = N,
+  n_decks       = 6,
+  penetration   = 0.75,
+  hit_soft_17   = FALSE,
+  payout_bj     = 1.5,
+  can_double    = TRUE,
+  can_split     = FALSE,
+  can_surrender = TRUE
+); k <- k + 1
+
+rows[[k]] <- make_row(
+  name          = "hilo_double_OFF",
+  strategy      = "hilo",
+  res           = res_hilo_double_off,
+  N             = N,
+  n_decks       = 6,
+  penetration   = 0.75,
+  hit_soft_17   = FALSE,
+  payout_bj     = 1.5,
+  can_double    = FALSE,
+  can_split     = FALSE,
+  can_surrender = TRUE
+); k <- k + 1
+
+rows[[k]] <- make_row(
+  name          = "hilo_surrender_ON",
+  strategy      = "hilo",
+  res           = res_hilo_R_on,
+  N             = N,
+  n_decks       = 6,
+  penetration   = 0.75,
+  hit_soft_17   = FALSE,
+  payout_bj     = 1.5,
+  can_double    = TRUE,
+  can_split     = FALSE,
+  can_surrender = TRUE
+); k <- k + 1
+
+rows[[k]] <- make_row(
+  name          = "hilo_surrender_OFF",
+  strategy      = "hilo",
+  res           = res_hilo_R_off,
+  N             = N,
+  n_decks       = 6,
+  penetration   = 0.75,
+  hit_soft_17   = FALSE,
+  payout_bj     = 1.5,
+  can_double    = TRUE,
+  can_split     = FALSE,
+  can_surrender = FALSE
+); k <- k + 1
+
+
+# -------------------------------------------------------
+# Končni veliki data.frame:
+# -------------------------------------------------------
+results_all <- do.call(rbind, rows)
+
+# write.csv(results_all, "results/all_scenarios.csv", row.names = FALSE)
+
+results_all
+
+subset(results_all, strategy == "hilo")
+
+subset(results_all, grepl("pen_", scenario))
+
+subset(results_all, scenario %in% c("hilo_S17_rule","hilo_H17_rule"))
 
 
 
