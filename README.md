@@ -22,7 +22,7 @@ Mapa tests/ vsebuje kodo za test-driven development, kjer so implementirani test
 ---
 ## Struktura projekta
 
-├── BJ_skeleton.R       # ogrodna verzija za testiranje/demos \
+├── BJ_skeleton.R       # nepomembna skripta (vse kar je tu in še več je v mapi R)
 ├── R/  \
 │   ├── 01_cards.R          # definicije kart, helper funkcije  \
 │   ├── 02_shoe.R           # shoe, penetracija, reshuffling  \
