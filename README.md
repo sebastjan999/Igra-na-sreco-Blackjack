@@ -9,6 +9,15 @@ Ta projekt implementira **Monte Carlo simulacije Blackjacka** z uporabo:
 - napredno verzijo z **Hi–Lo štetjem kart** in **bet spread**.
 
 Projekt omogoča analizo house edge, ROI, volatilnosti, bankroll poteka in učinkov uporabe strategij.
+Vsa ključna logika projekta se nahaja v mapi R/, kjer so shranjene funkcije in ostala pomembna koda. To kodo uporabljamo v naslednjih pomembnih R skriptah:
+
+-> main.R – skripta za "testerja"; služi kot osnovna točka za zagon in preverjanje delovanja.
+
+-> simulacije.R – skripta za izvajanje simulacij ter zbiranje metrik.
+
+-> grafi.R – skripta za vizualizacijo zbranih podatkov.
+
+Mapa tests/ vsebuje kodo za test-driven development, kjer so implementirani testi za preverjanje pravilnosti delovanja funkcij iz mape R.
 
 ---
 ## Struktura projekta
