@@ -67,8 +67,8 @@ make_row <- function(
 # -----------------------------------------------------------------------------
 #  1.) Primerjava 3eh strategij z istimi pravili
 # -----------------------------------------------------------------------------
-N = 100
-set.seed(1)
+N = 1e6
+set.seed(1090)
 
 # 1) Demo/naključna simulacija (simulate_n + simulate_hand)
 res_demo <- simulate_n(
@@ -79,7 +79,7 @@ res_demo <- simulate_n(
   payout_bj  = 1.5
 )
 
-set.seed(1)
+set.seed(1090)
 # 2) Basic strategija + shoe + reshuffle (brez Hi-Lo, flat bet)
 res_basic <- simulate_with_shoe(
   N            = N,
@@ -93,7 +93,7 @@ res_basic <- simulate_with_shoe(
   can_surrender= TRUE
 )
 
-set.seed(1)
+set.seed(1090)
 # 3) Napredna strategija: Hi-Lo + bet spread
 res_hilo <- simulate_with_shoe_hilo(
   N            = N,
@@ -110,7 +110,7 @@ res_hilo <- simulate_with_shoe_hilo(
 # Hiter povzetek (EV in SE)
 data.frame(
   strategija = c("Demo / random", "Basic (shoe)", "Hi-Lo (shoe + spread)"),
-  EV         = c(res_demo$EV,     res_basic$EV,   res_hilo$EV),
+  HE         = c(-res_demo$EV,     res_basic$HE,   res_hilo$HE),
   SE         = c(res_demo$SE,     res_basic$SE,   res_hilo$SE)
 )
 
@@ -191,10 +191,10 @@ data.frame(
 # -----------------------------------------------------------------------------
 #  3.) Vpliv igralčevih pravil: douvle/split/surrenderON/OFF
 # -----------------------------------------------------------------------------
-
-#a) DOUBLE ON/OFF
-set.seed(4)
-
+#DO tuki proper simulacije sam tok casa traja da mal pauzice XD
+#a) DOUBLE ON/OFF  - IS a bit weird krkol sprobam se zdi da se double pravilo dejansko igralcu ne splaca, bom ceknu cde je kej v kosi al je pac zto k ni hilo taktika
+set.seed(46)
+N = 10000
 res_basic_double_on <- simulate_with_shoe(
   N            = N,
   n_decks      = 6,
@@ -207,7 +207,7 @@ res_basic_double_on <- simulate_with_shoe(
   can_surrender= TRUE
 )
 
-set.seed(4)
+set.seed(46)
 res_basic_double_off <- simulate_with_shoe(
   N            = N,
   n_decks      = 6,
@@ -227,7 +227,7 @@ data.frame(
 )
 
 #b) CAN SURRENDER ON/OFF
-set.seed(5)
+set.seed(521)
 
 res_basic_R_on <- simulate_with_shoe(
   N            = N,
@@ -241,7 +241,7 @@ res_basic_R_on <- simulate_with_shoe(
   can_surrender= TRUE
 )
 
-set.seed(5)
+set.seed(521)
 res_basic_R_off <- simulate_with_shoe(
   N            = N,
   n_decks      = 6,
