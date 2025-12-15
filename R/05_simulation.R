@@ -28,6 +28,7 @@ simulate_with_shoe <- function(N = 1e5,
   shoe <- init_shoe(n_decks = n_decks, penetration = penetration)
   
   gains        <- numeric(N)
+  bets         <- numeric(N)
   bj_player    <- logical(N)
   bj_dealer    <- logical(N)
   surrendered  <- logical(N)
@@ -56,6 +57,8 @@ simulate_with_shoe <- function(N = 1e5,
     player_bust[i] <- isTRUE(res$player_bust)
     dealer_bust[i] <- isTRUE(res$dealer_bust)
     doubled[i]     <- isTRUE(res$doubled)
+    bet_mult <- if (isTRUE(res$doubled)) 2 else 1
+    bets[i]  <- bet * bet_mult
   }
   
   # osnovne statistike
@@ -66,10 +69,20 @@ simulate_with_shoe <- function(N = 1e5,
   se  <- s / sqrt(N)
   ci  <- c(mu - 1.96 * se, mu + 1.96 * se)
   
+  #stake metrike
+  avg_bet_per_hand <- mean(bets)
+  total_bet        <- sum(bets)
+  ROI              <- if (total_bet > 0) sum(gains) / total_bet else NA_real_
+  
+  # house edge na enoto stave
+  HE_per_bet <- if (avg_bet_per_hand > 0) -mu / avg_bet_per_hand else NA_real_
+  
+  #izidi
   win_rate  <- mean(gains > 0)
   loss_rate <- mean(gains < 0)
   push_rate <- mean(gains == 0)
   
+  # posebni eventi
   bj_rate_player   <- mean(bj_player)
   bj_rate_dealer   <- mean(bj_dealer)
   surrender_rate   <- mean(surrendered)
@@ -84,13 +97,20 @@ simulate_with_shoe <- function(N = 1e5,
   
   list(
     # osnovne metrike
-    N          = N,
-    EV         = mu,
-    HE         = he,
-    Var        = v,
-    SD         = s,
-    SE         = se,
-    CI95       = ci,
+    N                   = N,
+    EV                  = mu,
+    HE_per_hand         = he,
+    Var                 = v,
+    SD                  = s,
+    SE                  = se,
+    CI95                = ci,
+    
+    #stake metrike
+    avg_bet_per_hand = avg_bet_per_hand,
+    HE_per_bet       = HE_per_bet,
+    total_bet        = total_bet,
+    ROI              = ROI,
+    bets             = bets,
     
     # izidi
     win_rate   = win_rate,
@@ -144,6 +164,7 @@ simulate_with_shoe_hilo <- function(N = 1e5,
   running_cnt  <- numeric(N)
   true_cnt     <- numeric(N)
   bet_s        <- numeric(N)
+  bet_base  <- numeric(N)
   
   bj_player    <- logical(N)
   bj_dealer    <- logical(N)
@@ -167,10 +188,9 @@ simulate_with_shoe_hilo <- function(N = 1e5,
     true_cnt[i]    <- tc_i
     running_cnt[i] <- rc
     
-    # bet spread: predpostavljam, da imaš bet_spread(tc) definirano
+    # bet spread
     spread_mult <- bet_spread(tc_i)  # npr. 1, 2, 4, 8 ...
     bet_i       <- bet * spread_mult
-    bet_s[i]    <- bet_i
     
     res <- deal_hand_from_shoe_hilo(
       shoe          = shoe,
@@ -185,15 +205,19 @@ simulate_with_shoe_hilo <- function(N = 1e5,
     )
     
     gains[i]       <- res$gain
+    bet_base[i]    <- bet_i
+    bet_mult       <- if (isTRUE(res$doubled)) 2 else 1
+    bet_s[i]       <- bet_i * bet_mult
     shoe           <- res$shoe
     rc             <- res$running_count
-    
+  
     bj_player[i]   <- isTRUE(res$player_bj)
     bj_dealer[i]   <- isTRUE(res$dealer_bj)
     surrendered[i] <- isTRUE(res$surrendered)
     player_bust[i] <- isTRUE(res$player_bust)
     dealer_bust[i] <- isTRUE(res$dealer_bust)
     doubled[i]     <- isTRUE(res$doubled)
+
   }
   
   # osnovne statistike
@@ -237,22 +261,21 @@ simulate_with_shoe_hilo <- function(N = 1e5,
   
   list(
     # osnovne metrike
-    N           = N,
-    EV          = mu,
-    HE_per_hand = he,
-    Var         = v,
-    SD          = s,
-    SE          = se,
-    CI95        = ci,
-    EV_100      = EV_100,
+    N                = N,
+    EV               = mu,
+    avg_bet_per_hand = avg_bet_per_hand,
+    HE_per_bet       = HE_per_bet,
+    HE_per_hand      = he,
+    Var              = v,
+    SD               = s,
+    SE               = se,
+    CI95             = ci,
+    EV_100           = EV_100,
     
     # izidi
     win_rate   = win_rate,
     loss_rate  = loss_rate,
     push_rate  = push_rate,
-    
-    avg_bet_per_hand = avg_bet_per_hand,
-    HE               = HE_per_bet,
     
     # posebni eventi
     bj_rate_player   = bj_rate_player,
@@ -268,6 +291,7 @@ simulate_with_shoe_hilo <- function(N = 1e5,
     EV_by_TC      = EV_by_TC,
     
     # stave & ROI
+    bet_base = bet_base,
     bets       = bet_s,
     total_bet  = total_bet,
     ROI        = ROI,
