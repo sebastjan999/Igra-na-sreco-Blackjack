@@ -40,9 +40,10 @@ make_row <- function(
     # osnovne metrike (če jih ni v res, damo NA)
     EV        = if (!is.null(res$EV)) res$EV else NA_real_,
     SE        = if (!is.null(res$SE)) res$SE else NA_real_,
-    HE        = if (!is.null(res$HE)) res$HE else 
+    HE_per_hand        = if (!is.null(res$HE)) res$HE else 
       if (!is.null(res$HE_per_hand)) res$HE_per_hand else NA_real_,
-    ROI       = if (!is.null(res$ROI)) res$ROI else NA_real_,
+    HE_per_bet        = if (!is.null(res$HE_per_bet)) res$HE_per_bet else -res$EV,
+    ROI       = if (!is.null(res$ROI)) res$ROI else res$EV,
     
     win_rate   = if (!is.null(res$win_rate)) res$win_rate else NA_real_,
     loss_rate  = if (!is.null(res$loss_rate)) res$loss_rate else NA_real_,
@@ -68,7 +69,7 @@ make_row <- function(
 #  1.) Primerjava 3eh strategij z istimi pravili
 # -----------------------------------------------------------------------------
 N = 1e6
-set.seed(1)
+set.seed(1090)
 
 # 1) Demo/naključna simulacija (simulate_n + simulate_hand)
 res_demo <- simulate_n(
@@ -79,7 +80,7 @@ res_demo <- simulate_n(
   payout_bj  = 1.5
 )
 
-set.seed(1)
+set.seed(1090)
 # 2) Basic strategija + shoe + reshuffle (brez Hi-Lo, flat bet)
 res_basic <- simulate_with_shoe(
   N            = N,
@@ -93,7 +94,7 @@ res_basic <- simulate_with_shoe(
   can_surrender= TRUE
 )
 
-set.seed(1)
+set.seed(1090)
 # 3) Napredna strategija: Hi-Lo + bet spread
 res_hilo <- simulate_with_shoe_hilo(
   N            = N,
@@ -108,18 +109,30 @@ res_hilo <- simulate_with_shoe_hilo(
 )
 
 # Hiter povzetek (EV in SE)
-data.frame(
+df1 = data.frame(
   strategija = c("Demo / random", "Basic (shoe)", "Hi-Lo (shoe + spread)"),
-  HE         = c(-res_demo$EV,     res_basic$HE,   res_hilo$HE),
-  SE         = c(res_demo$SE,     res_basic$SE,   res_hilo$SE)
+  
+  EV_per_hand = c(res_demo$EV, res_basic$EV, res_hilo$EV),
+  
+  # house edge na roko (samo -EV)
+  HE_per_hand = c(-res_demo$EV, res_basic$HE_per_hand, res_hilo$HE_per_hand),
+  
+  # primerljivo med strategijami: HE na enoto vložka
+  HE_per_bet  = c(-res_demo$EV, res_basic$HE_per_bet, res_hilo$HE_per_bet),
+  
+  # še bolj intuitivno: ROI (enako kot -HE_per_bet)
+  ROI         = c(res_demo$EV, res_basic$ROI, res_hilo$ROI),
+  
+  avg_bet     = c(1, res_basic$avg_bet_per_hand, res_hilo$avg_bet_per_hand)
 )
 
+write.csv(df1, "demo_basic_hilo.csv", row.names = FALSE)
+
+#Hi-Lo strategija sama po sebi ne garantira pozitivnega EV, vendar zmanjša house edge na enoto stave, kar pomeni, da igralec dolgoročno izgublja počasneje oziroma pri ugodnih pogojih (večja penetracija, boljši spread, index plays) lahko doseže pozitiven EV.
 res_basic$win_rate
 res_basic$loss_rate
 res_basic$push_rate
 
-res_hilo$ROI
-res_hilo$HE   # house edge na enoto stave pri Hi-Lo
 
 # -----------------------------------------------------------------------------
 #  2.) Primerjava S17 vs H17 za basic strategijo in Hi-Lo strategijo
@@ -158,7 +171,8 @@ data.frame(
   pravilo = c("S17", "H17"),
   EV      = c(res_basic_S17$EV, res_basic_H17$EV),
   SE      = c(res_basic_S17$SE, res_basic_H17$SE),
-  HE      = c(res_basic_S17$HE, res_basic_H17$HE)
+  HE_per_bet      = c(res_basic_S17$HE_per_bet, res_basic_H17$HE_per_bet),
+  bet = c(res_basic_S17$avg_bet_per_hand, res_basic_H17$avg_bet_per_hand)
 )
 
 set.seed(1)
@@ -184,7 +198,7 @@ res_hilo_H17 <- simulate_with_shoe_hilo(
 data.frame(
   pravilo = c("S17", "H17"),
   EV      = c(res_hilo_S17$EV, res_hilo_H17$EV),
-  HE      = c(res_hilo_S17$HE, res_hilo_H17$HE),
+  HE_per_bet      = c(res_hilo_S17$HE_per_bet, res_hilo_H17$HE_per_bet),
   ROI     = c(res_hilo_S17$ROI, res_hilo_H17$ROI)
 )
 
@@ -193,7 +207,7 @@ data.frame(
 # -----------------------------------------------------------------------------
 #DO tuki proper simulacije sam tok casa traja da mal pauzice XD
 #a) DOUBLE ON/OFF  - IS a bit weird krkol sprobam se zdi da se double pravilo dejansko igralcu ne splaca, bom ceknu cde je kej v kosi al je pac zto k ni hilo taktika
-set.seed(1)
+set.seed(2)
 N = 1e4
 res_basic_double_on <- simulate_with_shoe(
   N            = N,
@@ -207,7 +221,7 @@ res_basic_double_on <- simulate_with_shoe(
   can_surrender= TRUE
 )
 
-set.seed(1)
+set.seed(2)
 res_basic_double_off <- simulate_with_shoe(
   N            = N,
   n_decks      = 6,
@@ -223,6 +237,7 @@ res_basic_double_off <- simulate_with_shoe(
 data.frame(
   double = c("ON", "OFF"),
   EV    = c(res_basic_double_on$EV, res_basic_double_off$EV),
+  HE_per_bet = c(res_basic_double_on$HE_per_bet, res_basic_double_off$HE_per_bet),
   SE    = c(res_basic_double_on$SE, res_basic_double_off$SE)
 )
 

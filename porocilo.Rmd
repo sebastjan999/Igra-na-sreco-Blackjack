@@ -18,10 +18,10 @@ output: html_document
 4) delivec vleče do ≥17; pri **H17** vleče tudi na *soft 17*, pri **S17** ne,\
 5) primerjava (zmaga/poraz/*push*).
 
-**Parametri, ki jih spreminjamo v simulacijah:** število kompletov, H17/S17, izplačilo za BJ (3:2 ali 6:5), *surrender*, *DAS/RSA*, penetracija (delež odigranih kart pred mešanjem).
+**Parametri, ki jih spreminjamo v simulacijah:** število kompletov, različne strategije igralca(demo/osnovna/napredna), H17/S17, izplačilo za BJ (3:2 ali 6:5), *surrender*, double, split, penetracija (delež odigranih kart pred mešanjem).
 
 **Metrike:** dobiček na stavo $G$, verjetnosti izidov (win/lose/push), volatilnost (aka. standardni odklon), več v nadaljevanju.\
-**House edge:** $\mathrm{HE}=-\mathbb{E}[G]$. Negativen $\mathbb{E}[G]$ pomeni prednost hiše.
+**House edge:** $\mathrm{HE}=-\mathbb{E}[G]$. Negativen $\mathbb{E}[G]$ pomeni prednost hiše. Ta enakost velja kadar je \$G\$ dobiček na roko pri stavi 1. Ker pa imamo tudi implementirano pravilo double in kasneje napredno Hi-Lo strategijo, je bolj smiselno gledati \$HE_per_bet\$, torej house edhe na enoto vložka, ki jo izračunamo na naslednji način: $$HE_{\text{per bet}} = -\frac{\mathbb{E}[G]}{\mathbb{E}[\text{bet}]}$$
 
 ------------------------------------------------------------------------
 
@@ -33,9 +33,9 @@ Strategija določa, **kako igralec izbira poteze** na podlagi stanja igre. Stanj
 
 $$
 s = (V_P, V_D, S_P, P_P)
-$$
+$$kjer:
 
-kjer: - $V_P$ — vsota igralčevih kart (ase štejemo kot 1 ali 11),\
+\- $V_P$ — vsota igralčevih kart (ase štejemo kot 1 ali 11),\
 - $V_D$ — delivčeva vidna karta (*upcard*),\
 - $S_P$ — indikator mehke roke (TRUE, če as šteje kot 11),\
 - $P_P$ — indikator para (možen *split*).
@@ -89,7 +89,7 @@ Vir (prilagojeno): <https://www.blackjackonlineigra.eu/article/tabela-za-osnovno
 - **R** = *Surrender*
 
 Tabela prikazuje optimalne poteze za *hard totals* (roka brez asa ali z asom, ki šteje kot 1).\
-Soft roke in pari sledijo v ločenih tabelah (WiP).
+Soft roke in pari so v ločenih tabelah.
 
 ### Hard totals (osnovna strategija)
 
@@ -103,7 +103,7 @@ Soft roke in pari sledijo v ločenih tabelah (WiP).
 |           13–16 |  S  |  S  |  S  |  S  |  S  |  H  |  H  |  H  |  H  |  H  |
 |      17 ali več |  S  |  S  |  S  |  S  |  S  |  S  |  S  |  S  |  S  |  S  |
 
-*Opomba:* Pari (npr. 10–10, 8–8, A–A) in *soft* roke (A+X) imajo ločene sezname optimalnih potez (v pripravi).
+*Opomba:* Pari (npr. 10–10, 8–8, A–A) in *soft* roke (A+X) imajo ločene sezname optimalnih potez
 
 ------------------------------------------------------------------------
 
@@ -115,10 +115,10 @@ Soft roke in pari sledijo v ločenih tabelah (WiP).
 -   **0:** 7, 8, 9\
 -   **−1:** 10, J, Q, K, A
 
-S tem nastane **tekoči count**:
+S tem nastane **tekoči count (RC)**:
 
 $$
-C = \sum \text{vrednosti vseh do sedaj videnih kart}
+RC = \sum \text{vrednosti vseh do sedaj videnih kart}
 $$
 
 Ker je v igri več kompletov kart (npr. 6), je potrebno popraviti pristranskost z deljenjem:
@@ -126,10 +126,10 @@ Ker je v igri več kompletov kart (npr. 6), je potrebno popraviti pristranskost 
 ### **True Count**
 
 $$
-TC = \frac{C}{\text{decks remaining}}
+TC = \frac{RC}{\text{decks remaining}}
 $$
 
-kjer je stevilo preostalih kompletov ocenjeno kot:
+kjer je število preostalih kompletov ocenjeno kot:
 
 $$
 \text{decks_remaining} = (\text{total_cards} - \text{pos} + 1) / 52.
@@ -153,8 +153,6 @@ V našem Monte Carlo modelu uporabljamo preprost bet spread (primer):
 -   TC ≥ 3 → 8×
 
 S tem lahko simuliramo vpliv štetja kart na pričakovani dobiček (EV).
-
-*WiP*
 
 ## 2.6 Povzetek
 
@@ -193,7 +191,7 @@ Simulacija ima dva nivoja:
 ### (1) Simulacija ene roke
 
 Funkciji `deal_hand_from_shoe()` in `deal_hand_from_shoe_hilo()` izvedeta:\
-1. začetno deljenje (P1, P2, D_up, D_hole)\
+1. začetno deljenje (P1, D_up, P2, D_hole)\
 2. preverjanje blackjacka\
 3. igralčevo igro po osnovni strategiji\
 4. delivčevo igro po pravilih H17 ali S17\
@@ -336,3 +334,97 @@ $$
 -   Izračunane so metrike: EV, SD, SE, 95% CI, frekvence BJ/bust/double/surrender, potek bankrolla, max drawdown
 -   Hi–Lo razširitev vključuje: running count, true count, bet spread, ROI, EV po TC
 -   Te metrike omogočajo analizo vpliva pravil igre ter oceno prednosti pri štetju kart
+
+\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_
+
+*Prijekt se mi zdi se zelo obsezen, ce pa morda ni dovolj pa lahko dodajam se: razvoj proper splita (resplit, Das), kelly func za hilo (opt bet size), skewness,kurtosis za porazdelitev dobitkov(ker je zlo nesimetricn), RoR(Risk of ruin)...na to temo bi lahko pol nardil se celo igro Janezek gre v Casino XD, Hit frequency, etc(pac to se lahko ceu magisterij iz tega spise ce bi se tok zajebavu s tem XD)*
+
+\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_
+
+# 4. Primerjava strategij in rezultati simulacij
+
+V nadaljevanju primerjam rezultate Monte Carlo simulacij. Privzeto uporabljam:
+
+-   6 kompletov kart (*n_decks = 6*)
+-   **S17** (dealer stoji na soft 17), razen tam kjer primerjam S17 vs H17
+-   *double* in *surrender* sta dovoljena
+-   *split* je privzeto izklopljen (ker implementacija ni popolnoma zaključena) in ga vključim samo pri posebni primerjavi
+-   izplačilo blackjacka 3:2 (*payout_bj = 1.5*)
+-   velikost vzorca: $N = 10^6$ (če ni navedeno drugače)
+
+-\> EV_per_hand pove, koliko povprečno dobimo/izgubimo na eno roko (pri negativni vrednosti dolgoročno izgubljamo).
+
+-\> Pri Hi–Lo je EV_per_hand lahko bolj negativen, ker so stave višje (večja volatilnost), zato se bolj splača gledati HE_per_bet.
+
+-\> HE_per_bet je bolj “poštena” primerjava, ker pove izgubo na enoto vložka. Nižji HE_per_bet pomeni boljši rezultat za igralca.
+
+-\> Pri Hi–Lo je povprečna stava (avg_bet) večja, zato je smiselno primerjati tudi ROI. Primerjava strategij (demo vs basic vs Hi-Lo)
+
+## 4.1 Primerjava strategij: demo vs basic vs Hi–Lo
+
+Najprej primerjam tri strategije pri istih pravilih:
+
+-   **Demo / random**: kontrolni primer, naključno igranje
+-   **Basic (shoe)**: osnovna strategija iz CSV tabel (S17/H17)
+-   **Hi–Lo (shoe + spread)**: štetje kart + prilagajanje stave (bet spread)
+
+| Strategija            | $EV_{\text{per hand}}$ | $HE_{\text{per hand}}$ | $HE_{\text{per bet}}$ |     $ROI$ | $\overline{\text{bet}}$ |
+|------------|-----------:|-----------:|-----------:|-----------:|-----------:|
+| Demo / random         |              -0.037238 |               0.037238 |              0.037238 | -0.037238 |                   1.000 |
+| Basic (shoe)          |              -0.040783 |               0.040783 |              0.035375 | -0.035375 |                   1.153 |
+| Hi-Lo (shoe + spread) |              -0.055703 |               0.055703 |              0.025605 | -0.025605 |                   2.176 |
+
+Naključna strategija predstavlja referenčni primer brez uporabe kakršnegakoli znanja o igri. Pričakovani dobiček na roko je izrazito negativen, kar pomeni visoko prednost hiše.
+
+Osnovna strategija bistveno izboljša rezultate v primerjavi z naključnim igranjem. Čeprav je $EV$ še vedno negativen, in celo slabši od naključne strategije, se house edge na enoto stave zmanjša, kar pomeni počasnejše dolgoročne izgube.
+
+Hi–Lo strategija ima na prvi pogled najslabši $EV$ na roko, vendar to ni ustrezna metrika za primerjavo. Zaradi večjih stav pri ugodnih situacijah (visok *true count*) se poveča povprečna stava, kar vpliva na absolutni dobiček na roko.
+
+Ključni kazalnik je $HE_{\text{per_bet}}$, ki je pri Hi–Lo strategiji najnižji. To pomeni, da igralec na enoto vloženega denarja izgublja najmanj, kar je tudi osnovni cilj štetja kart.
+
+-   Naključno igranje vodi do največjih izgub.
+
+-   Osnovna strategija znatno zmanjša prednost hiše, vendar igre ne naredi poštene.
+
+-   Hi–Lo strategija zmanjša house edge na enoto stave, čeprav poveča povprečno velikost vložka.
+
+-   Za pozitivni $EV$ bi bile potrebne dodatne izboljšave (večja penetracija, bolj agresiven *bet spread*, *index plays*).
+
+Na podlagi simulacij lahko zaključimo, da štetje kart ne zagotavlja dobitka v vsaki igri, vendar dolgoročno izboljša položaj igralca v primerjavi z osnovno strategijo.
+
+## 4.2 Primerjava pravil delivca: S17 vs H17
+
+V tej sekciji primerjam, kako sprememba delivčevega pravila vpliva na rezultate:
+
+-   **S17**: delivec stoji na *soft 17*
+-   **H17**: delivec vleče tudi na *soft 17*
+
+Za primerljivost uporabim isti `set.seed()` in isti $N$.
+
+```{r basic_s17_h17_table, echo=FALSE, message=FALSE, warning=FALSE}
+
+df_basic_rules <- data.frame( pravilo = c("S17", "H17"), EV = c(-0.042195, -0.043469), SE = c(0.001163088, 0.001163590), HE_per_bet = c(0.03660209, 0.03761544), avg_bet = c(1.152803, 1.155616) )
+
+```
+
+Pri **H17** ima delivec malo več “opcij”, ker lahko vleče tudi na *soft 17*. To v povprečju nekoliko poveča prednost hiše, zato je pričakovani dobiček igralca (**EV**) malo bolj negativen, prav tako je nekoliko višji **HE_per_bet**.
+
+## 4.3 Vpliv pravil: double / surrender / split
+
+V tej sekciji pogledam, kako se rezultati spremenijo, če določena pravila dovolimo ali prepovemo.
+
+-   **Double**: igralec lahko podvoji stavo, vendar dobi točno še eno karto.
+-   **Surrender**: igralec lahko takoj odstopi in izgubi polovico stave.
+-   **Split**: ob paru lahko razdeli roko na dve roki (v tem projektu je split privzeto izklopljen).
+
+3.1. HE vs. pravila igre
+
+3.2. EV_by_TC – EV glede na true count
+
+3.3. Bankroll curve (časovna dinamika)
+
+3.4. Histogram dobitkov
+
+3.5. Penetration vs EV (pri Hi-Lo)
+
+3.6. ROI vs HE pri različnih strategijah
