@@ -38,9 +38,13 @@ Mapa tests/ vsebuje kodo za test-driven development, kjer so implementirani test
 ├── main.R                  # enotna vstopna točka (source vseh skript)  \
 ├── simulacije.R            # izvajanje simulacij za zbiranje metrik za analizo in risanje grafov \
 ├── grafi-R                 # \
+│    \
+│    \
 ├── tests/                  \
 │   ├── testthat            #   \
 │   ├── testthat/           #  \
+│    \
+│    \
 ├── porocilo.Rmd            # glavno poročilo  \
 ├── LICENSE  \
 └── README.md  \
