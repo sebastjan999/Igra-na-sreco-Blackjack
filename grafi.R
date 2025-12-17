@@ -1,6 +1,6 @@
 setwd("C:/Users/sebas/OneDrive/Namizje/MZR/Igra-na-sreco-Blackjack")
 
-source("simulacije.R")
+#source("simulacije.R")
 
 library(ggplot2)
 library(dplyr)
@@ -25,13 +25,13 @@ strategije_df <- results_all %>%
   )
 
 # EV po strategijah
-ggplot(strategije_df, aes(x = strategija, y = EV, fill = strategija)) +
+ggplot(strategije_df, aes(x = strategija, y = HE_per_bet, fill = strategija)) +
   geom_col() +
   geom_hline(yintercept = 0, linetype = "dashed") +
   labs(
-    title = "Pričakovani dobiček (EV) po strategijah",
+    title = "House edge na unitarno stavo (HE) po strategijah",
     x = "Strategija",
-    y = "EV na roko"
+    y = "HE na enoto stave"
   ) +
   theme(legend.position = "none")
 
@@ -47,7 +47,7 @@ he_rules_df <- results_all %>%
     strategija = if_else(strategy == "basic", "Basic", "Hi-Lo")
   )
 
-ggplot(he_rules_df, aes(x = pravilo, y = HE, fill = strategija)) +
+ggplot(he_rules_df, aes(x = pravilo, y = HE_per_bet, fill = strategija)) +
   geom_col(position = position_dodge(width = 0.7)) +
   labs(
     title = "House edge pri različnih pravilih delivca",
