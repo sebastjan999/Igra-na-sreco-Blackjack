@@ -22,7 +22,7 @@ Mapa tests/ vsebuje kodo za test-driven development, kjer so implementirani test
 ---
 ## Struktura projekta
 
-├── BJ_skeleton.R       # nepomembna skripta (vse kar je tu in še več je v mapi R)
+├── BJ_skeleton.R       # nepomembna skripta (vse kar je tu in še več je v mapi R) \
 ├── R/  \
 │   ├── 01_cards.R          # definicije kart, helper funkcije  \
 │   ├── 02_shoe.R           # shoe, penetracija, reshuffling  \
@@ -36,6 +36,11 @@ Mapa tests/ vsebuje kodo za test-driven development, kjer so implementirani test
 ├── basic_strategy_H17.csv  # tabela osnovne strategije za H17  \
 │  \
 ├── main.R                  # enotna vstopna točka (source vseh skript)  \
+├── simulacije.R            # izvajanje simulacij za zbiranje metrik za analizo in risanje grafov
+├── grafi-R                 # 
+├── tests/
+│   ├── testthat            #   \
+│   ├── testthat/           #  \
 ├── porocilo.Rmd            # glavno poročilo  \
 ├── LICENSE  \
 └── README.md  \
@@ -109,3 +114,7 @@ OPOZORILO: Za enkrat can_split se ni implementiran, zato neglede na to ali je TR
 **payout_bj**: izplačilo za naravni blackjack (običajno 1.5 = 3:2; lahko 1.2 = 6:5)
 
 **can_double, can_split, can_surrender**: (TRUE = pravila omogočena; FALSE = pravila onemogočena)
+
+## DODATNO
+
+V scripti simulacije.R so vse simulacije, ki sem jih izvajal, s pomočjo katerih sem zbral metrike za primerjavo in prikaz grafov, ki jih generiram v skripti grafi.R. simulacije.R je zaenkrat (bo morda odpravljeno) zelo neurejena in nametana, ker ni namenjena za ocenjevanje, kodo lahko poganja vsak s svojimi parametri kakor je opisano zgoraj.
