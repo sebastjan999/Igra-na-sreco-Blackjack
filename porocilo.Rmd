@@ -337,7 +337,7 @@ $$
 
 \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_
 
-*Prijekt se mi zdi se zelo obsezen, ce pa morda ni dovolj pa lahko dodajam se: razvoj proper splita (resplit, Das), kelly func za hilo (opt bet size), skewness,kurtosis za porazdelitev dobitkov(ker je zlo nesimetricn), RoR(Risk of ruin)...na to temo bi lahko pol nardil se celo igro Janezek gre v Casino XD, Hit frequency, etc(pac to se lahko ceu magisterij iz tega spise ce bi se tok zajebavu s tem XD)*
+*Projekt se mi zdi se zelo obsezen, ce pa morda ni dovolj pa lahko dodajam se: razvoj proper splita (resplit, Das), kelly func za hilo (opt bet size), skewness,kurtosis za porazdelitev dobitkov(ker je zlo nesimetricn), RoR(Risk of ruin)...na to temo bi lahko pol nardil se celo igro Janezek gre v Casino XD, Hit frequency, etc(pac to se lahko ceu magisterij iz tega spise ce bi se tok zajebavu s tem XD)*
 
 \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_
 
@@ -394,28 +394,333 @@ Na podlagi simulacij lahko zaključimo, da štetje kart ne zagotavlja dobitka v 
 
 ## 4.2 Primerjava pravil delivca: S17 vs H17
 
+### a) Basic strategy
+
 V tej sekciji primerjam, kako sprememba delivčevega pravila vpliva na rezultate:
 
 -   **S17**: delivec stoji na *soft 17*
 -   **H17**: delivec vleče tudi na *soft 17*
 
-Za primerljivost uporabim isti `set.seed()` in isti $N$.
+Za primerljivost uporabim isti vse ostale parametre, isti `set.seed()` in isti $N$.
 
 ```{r basic_s17_h17_table, echo=FALSE, message=FALSE, warning=FALSE}
 
 df_basic_rules <- data.frame( pravilo = c("S17", "H17"), EV = c(-0.042195, -0.043469), SE = c(0.001163088, 0.001163590), HE_per_bet = c(0.03660209, 0.03761544), avg_bet = c(1.152803, 1.155616) )
 
+knitr::kable(df_basic_rules, digits = 6,
+             caption = "Hi–Lo strategija: primerjava S17 vs H17 (isti seed, isti N)")
 ```
 
 Pri **H17** ima delivec malo več “opcij”, ker lahko vleče tudi na *soft 17*. To v povprečju nekoliko poveča prednost hiše, zato je pričakovani dobiček igralca (**EV**) malo bolj negativen, prav tako je nekoliko višji **HE_per_bet**.
 
+### b) Hi-Lo strategy
+
+V tem razdelku primerjamo pravilo delivca pri **Hi–Lo strategiji s stavnim razponom**.\
+Spremenjeno je samo pravilo delivca (S17 vs H17), vsi ostali parametri in `set.seed()` so enaki.
+
+```{r hilo_s17_h17_table, echo=FALSE, message=FALSE, warning=FALSE}
+df_hilo_rules <- data.frame(
+  pravilo     = c("S17", "H17"),
+  EV          = c(-0.037442, -0.037592),
+  HE_per_bet  = c(0.01713557, 0.01717364),
+  ROI         = c(-0.01713557, -0.01717364),
+  avg_bet     = c(2.185046, 2.188936)
+)
+
+knitr::kable(df_hilo_rules, digits = 6,
+             caption = "Hi–Lo strategija: primerjava S17 vs H17 (isti seed, isti N)")
+```
+
+Tudi pri Hi–Lo strategiji je pravilo **H17** nekoliko slabše za igralca.\
+Razlika v **EV** in **HE_per_bet** je majhna, vendar konsistentna: ko delivec vleče na *soft 17*, ima v povprečju rahlo več možnosti za izboljšanje svoje roke.
+
+Zanimivo je, da je pri Hi–Lo absolutni **EV na roko** še vedno negativen, vendar je **house edge na enoto vložka (HE_per_bet)** bistveno manjši kot pri osnovni strategiji.\
+To pomeni, da igralec pri štetju kart v povprečju izgublja počasneje, predvsem zato, ker več stavi v ugodnih situacijah (visok *true count*).
+
 ## 4.3 Vpliv pravil: double / surrender / split
 
-V tej sekciji pogledam, kako se rezultati spremenijo, če določena pravila dovolimo ali prepovemo.
+V tej sekciji analiziramo, kako se pričakovani izid spremeni, če določena pravila igre dovolimo ali prepovemo.\
+Primerjave so narejene ločeno za osnovno strategijo in za Hi–Lo strategijo.
+
+Uporabljena pravila:
 
 -   **Double**: igralec lahko podvoji stavo, vendar dobi točno še eno karto.
 -   **Surrender**: igralec lahko takoj odstopi in izgubi polovico stave.
--   **Split**: ob paru lahko razdeli roko na dve roki (v tem projektu je split privzeto izklopljen).
+-   **Split**: ob paru lahko razdeli roko na dve ločeni roki.
+
+------------------------------------------------------------------------
+
+### 4.3.1 Double pri osnovni strategiji
+
+Najprej pogledamo vpliv pravila *double* pri osnovni strategiji.
+
+```{r basic_double_table, echo=FALSE, message=FALSE, warning=FALSE}
+df_basic_double <- data.frame(
+  double       = c("ON", "OFF"),
+  EV_per_hand  = c(-0.03595, -0.02535),
+  HE_per_bet   = c(0.03127991, 0.02535),
+  avg_bet      = c(1.1493, 1.0000)
+)
+
+knitr::kable(
+  df_basic_double,
+  digits = 6,
+  caption = "Osnovna strategija: vpliv pravila double"
+)
+```
+
+Na prvi pogled se zdi, da omogočeno podvajanje poslabša rezultat. House edge na enoto vložka je večji, ko je *double* dovoljen.
+
+Za boljše razumevanje poglejmo še ločeno pričakovani izid **na stavo** za roke, kjer je bil *double* dejansko uporabljen:
+
+-   **EV na stavo (doubled roke)**: −0.0114\
+-   **EV na stavo (brez double)**: −0.0383
+
+To pomeni, da so *double roke same po sebi bistveno manj slabe* kot povprečna roka brez podvajanja.
+
+**Razlaga:**\
+Double je lokalno dobra odločitev – v situacijah, kjer jo osnovna strategija priporoča, res zmanjša pričakovano izgubo.\
+Vendar pa omogočeno podvajanje **poveča povprečni vložek**, saj igralec v približno 15 % primerov stavi dvojno vsoto. Ker je celotna igra še vedno negativna, to vodi do hitrejšega izgubljanja kapitala.
+
+Zato je za pravilno primerjavo smiselno gledati **house edge na enoto vložka**, ne le EV na roko.
+
+------------------------------------------------------------------------
+
+### 4.3.2 Surrender pri osnovni strategiji
+
+```{r basic_surrender_table, echo=FALSE, message=FALSE, warning=FALSE}
+df_basic_surrender <- data.frame(
+surrender = c("ON", "OFF"),
+EV = c(-0.03595, -0.05400),
+HE_per_bet = c(0.03127991, 0.04714510),
+surrender_rate = c(0.0805, 0.0000)
+)
+
+knitr::kable(
+df_basic_surrender,
+digits = 6,
+caption = "Osnovna strategija: vpliv pravila surrender"
+)
+```
+
+Omogočen *surrender* jasno izboljša rezultat. Igralec se v približno 8 % primerov odloči za predajo in s tem zmanjša izgube v zelo neugodnih situacijah.
+
+Surrender je eno izmed pravil, ki imajo največji pozitiven vpliv na house edge.
+
+------------------------------------------------------------------------
+
+### 4.3.3 Split pri osnovni strategiji
+
+```{r basic_split_table, echo=FALSE, message=FALSE, warning=FALSE}
+df_basic_split <- data.frame(
+split = c("ON", "OFF"),
+EV = c(-0.02580, -0.03595),
+HE_per_bet = c(0.02234540, 0.03127991)
+)
+
+knitr::kable(
+df_basic_split,
+digits = 6,
+caption = "Osnovna strategija: vpliv pravila split"
+)
+```
+
+Delitev parov (*split*) izboljša pričakovani izid. S tem se igralec izogne zelo slabim kombinacijam (npr. 16 proti močni dealerjevi karti) in razdeli tveganje na dve roki.
+
+------------------------------------------------------------------------
+
+### 4.3.4 Double in surrender pri Hi–Lo strategiji
+
+Pri Hi–Lo strategiji so opazni podobni vzorci kot pri osnovni strategiji.
+
+```{r hilo_double_table, echo=FALSE, message=FALSE, warning=FALSE}
+
+df_hilo_double <- data.frame(
+double = c("ON", "OFF"),
+EV = c(-0.04765, -0.02180),
+HE_per_bet = c(0.02423703, 0.01253594),
+HE_per_hand = c(0.04765, 0.02180),
+ROI = c(-0.02423703, -0.01253594)
+)
+
+knitr::kable(
+df_hilo_double,
+digits = 6,
+caption = "Hi–Lo strategija: vpliv pravila double"
+)
+```
+
+Čeprav Hi–Lo prilagaja višino stave, omogočeno podvajanje brez dodatnih prilagoditev potez (t. i. *index plays*) poslabša skupni izid. Double se pogosto zgodi v situacijah z višjo stavo, kjer osnovna strategija še ne izkorišča popolne prednosti pozitivnega true counta.
+
+```{r hilo_surrender_table, echo=FALSE, message=FALSE, warning=FALSE}
+
+df_hilo_surrender <- data.frame(
+surrender = c("ON", "OFF"),
+EV = c(-0.04765, -0.06830),
+HE_per_bet = c(0.02423703, 0.03432506),
+HE_per_hand = c(0.04765, 0.06830),
+ROI = c(-0.02423703, -0.03432506),
+surrender_rate = c(0.0805, 0.0000)
+)
+
+knitr::kable(
+df_hilo_surrender,
+digits = 6,
+caption = "Hi–Lo strategija: vpliv pravila surrender"
+)
+```
+
+Tudi pri Hi–Lo surrender občutno zmanjša izgube, saj igralec omeji škodo v najslabših situacijah.
+
+------------------------------------------------------------------------
+
+### 4.3.5 Povzetek vpliva pravil
+
+-   *Double* je lokalno dobra poteza, vendar zaradi povečanja povprečnega vložka poslabša skupni rezultat.
+-   *Surrender* dosledno izboljša house edge tako pri osnovni strategiji kot pri Hi–Lo.
+-   *Split* omogoča boljše obvladovanje slabih začetnih kombinacij.
+-   Pri Hi–Lo strategiji brez dodatnih prilagoditev potez (index plays) sama sprememba višine stave še ne zadošča za pozitiven EV.
+
+### 4.3.6 Ekstremni pogoji igre: »best« vs »worst« scenarij (Hi–Lo)
+
+Za konec sekcije pogledamo še dva namerno ekstremna scenarija, ki ponazarjata, kako močno lahko pravila in pogoji igre vplivajo na pričakovani izid, tudi brez uporabe dodatnih optimizacij (npr. index plays).
+
+V obeh primerih uporabljamo Hi–Lo štetje kart, razlika pa je tako v *pravilih* igre kot v strukturi *shoe-a*.
+
+```{r hilo_extreme_table, echo=FALSE, message=FALSE, warning=FALSE}
+df_hilo_extreme <- data.frame(
+  pravila      = c("Best-case", "Worst-case"),
+  EV           = c( 0.01735,  -0.06090),
+  HE_per_bet   = c(-0.006275091,  0.041572804),
+  HE_per_hand  = c(-0.01735,   0.06090),
+  ROI          = c( 0.006275091, -0.041572804)
+)
+
+knitr::kable(
+  df_hilo_extreme,
+  digits = 6,
+  caption = "Hi–Lo strategija: primerjava najboljših in najslabših pogojev igre"
+)
+```
+
+*Best-case scenarij vključuje:*
+
+-   2 kompleta kart,
+
+-   visoko penetracijo (90 %),
+
+-   pravilo S17,
+
+-   standardno izplačilo za blackjack (3:2).
+
+-   in vsa pravila (double, split, surrender)
+
+V tem primeru se house edge obrne v korist igralca, čeprav strategija še vedno uporablja zgolj osnovna pravila brez prilagoditev potez glede na true count.
+
+*Worst-case scenarij vključuje:*
+
+-   6 kompletov kart,
+
+-   nizko penetracijo (50 %),
+
+-   pravilo H17,
+
+-   znižano izplačilo za blackjack (6:5).
+
+-   in nobenega pravila (double, split, surrender)
+
+V tem primeru je igra izrazito neugodna za igralca, Hi–Lo štetje pa lahko zgolj omeji izgube, ne pa jih izniči.
+
+Ta primer jasno pokaže, da je pri blackjacku izbira pravil in pogojev igre vsaj tako pomembna kot sama strategija igranja.
+
+## 4.4 Vpliv izplačila za blackjack (3:2 vs 6:5)
+
+V tej sekciji analiziramo vpliv izplačila za **naravni blackjack**. Edina razlika med simulacijami je razmerje izplačila za blackjack (3:2 proti 6:5), medtem ko so strategija, pravila igre, število simulacij in začetni *seed* enaki.
+
+Ker se razlika pokaže izključno ob pojavu blackjacka, je ta primer predvsem intuitiven, a hkrati zelo pomemben v praksi.
+
+### 4.4.1 Osnovna strategija (Basic)
+
+```{r basic_payout_table, echo=FALSE, message=FALSE, warning=FALSE}
+df_basic_payout <- data.frame(
+  payout_bj  = c("3:2", "6:5"),
+  EV         = c(-0.03415, -0.04768),
+  HE_per_bet = c(0.02961839, 0.04135299),
+  bj_rate    = c(0.0474, 0.0474)
+)
+
+knitr::kable(
+  df_basic_payout,
+  digits = 6,
+  caption = "Osnovna strategija: vpliv izplačila za blackjack (isti seed, isti N)"
+)
+```
+
+```{r hilo_payout_table, echo=FALSE, message=FALSE, warning=FALSE}
+df_hilo_payout <- data.frame(
+payout_bj = c("3:2", "6:5"),
+EV = c(-0.02445, -0.05433),
+HE_per_bet = c(0.01110001, 0.02466518),
+bj_rate = c(0.0474, 0.0474),
+avg_bet = c(2.2027, 2.2027)
+)
+
+knitr::kable(
+df_hilo_payout,
+digits = 6,
+caption = "Hi–Lo strategija: vpliv izplačila za blackjack (isti seed, isti N)"
+)
+```
+
+Pogostost blackjacka je v vseh simulacijah enaka.
+
+Razlika v rezultatih izhaja izključno iz razmerja izplačila.
+
+Izplačilo 6:5 bistveno poveča house edge, ne glede na strategijo igranja.
+
+To potrjuje znano dejstvo, da je 6:5 blackjack ena najslabših možnih različic igre za igralca.
+
+## 4.5 Vpliv penetracije na Hi–Lo strategijo
+
+V tej sekciji analiziramo vpliv **penetracije čevlja** (*penetration*) na uspešnost Hi–Lo strategije.
+
+Penetracija določa, kolikšen delež kart se odigra, preden pride do ponovnega mešanja (*reshuffle*). Višja penetracija pomeni, da ima igralec več informacij o sestavi preostalih kart, kar je ključno za štetje kart.
+
+V vseh simulacijah so uporabljeni: - ista Hi–Lo strategija, - enak bet spread, - isti začetni *seed* in število simulacij (*N*), - ostala pravila igre nespremenjena.
+
+```{r hilo_penetration_table, echo=FALSE, message=FALSE, warning=FALSE}
+df_hilo_penetration <- data.frame(
+  penetration = c(0.50, 0.75, 0.90),
+  EV          = c(-0.0420, -0.0552, -0.0338),
+  HE_per_bet  = c(0.02386499, 0.02416178, 0.01423997),
+  HE_per_hand = c(0.0420, 0.0552, 0.0338),
+  ROI         = c(-0.02386499, -0.02416178, -0.01423997),
+  avg_bet     = c(1.7599, 2.2846, 2.3736)
+)
+
+knitr::kable(
+  df_hilo_penetration,
+  digits = 6,
+  caption = "Hi–Lo strategija: vpliv penetracije čevlja (isti seed, isti N)"
+)
+```
+
+Rezultati jasno pokažejo, da ima **višja penetracija pozitiven vpliv**\
+na Hi–Lo strategijo:
+
+-    Pri **penetraciji 0.50** se čevelj meša relativno zgodaj, zato ima štetje kart omejeno uporabno vrednost.
+
+-    Pri **penetraciji 0.75** se povprečna stava poveča, vendar se EV na roko še celo poslabša (naključje?).
+
+-    Pri **penetraciji 0.90** je house edge na enoto vložka občutno manjši, kar pomeni učinkovitejšo uporabo informacij iz true counta.
+
+Višja penetracija omogoča:
+
+-    stabilnejši true count,
+
+-    bolj agresivno prilagajanje stave,
+
+-    večjo prednost igralca pri ugodnih situacijah.
 
 3.1. HE vs. pravila igre
 
