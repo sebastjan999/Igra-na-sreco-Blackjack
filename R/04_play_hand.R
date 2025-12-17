@@ -184,6 +184,10 @@ deal_hand_from_shoe <- function(shoe,
                                 can_double = TRUE,
                                 can_split = TRUE,
                                 can_surrender = TRUE) {
+  
+  can_double_global    <- can_double
+  can_split_global     <- can_split
+  can_surrender_global <- can_surrender
   # poskrbi za dovolj kart za začetno deljenje
   slice <- shoe_slice_df(shoe)
   if (nrow(slice) < 4) { shoe <- maybe_reshuffle(shoe); slice <- shoe_slice_df(shoe) }
@@ -248,14 +252,14 @@ deal_hand_from_shoe <- function(shoe,
       start_hand = hand1_start,
       shoe       = slice_h1,
       up_card    = up,
-      strategy   = function(hand, upc, can_double_hand = TRUE, ...) {
-        eff_double <- can_double && can_double_hand
+      strategy   = function(hand, upc, can_double = TRUE, ...) {
+        eff_double <- isTRUE(can_double_global) && isTRUE(can_double)
         basic_action_bs(
           player_vals    = hand,
           dealer_up      = upc,
           can_double     = eff_double,
           can_split      = FALSE,          # NE dovolimo re-splita
-          can_surrender  = can_surrender,
+          can_surrender  = isTRUE(can_surrender_global),
           bs_table       = BS_TABLE_CURRENT
         )
       },
@@ -269,14 +273,14 @@ deal_hand_from_shoe <- function(shoe,
       start_hand = hand2_start,
       shoe       = slice_h2,
       up_card    = up,
-      strategy   = function(hand, upc, can_double_hand = TRUE, ...) {
-        eff_double <- can_double && can_double_hand
+      strategy   = function(hand, upc, can_double = TRUE, ...) {
+        eff_double <- isTRUE(can_double_global) && isTRUE(can_double)
         basic_action_bs(
           player_vals    = hand,
           dealer_up      = upc,
           can_double     = eff_double,
           can_split      = FALSE,          # NE dovolimo re-splita
-          can_surrender  = can_surrender,
+          can_surrender  = isTRUE(can_surrender_global),
           bs_table       = BS_TABLE_CURRENT
         )
       },
@@ -346,17 +350,18 @@ deal_hand_from_shoe <- function(shoe,
     start_hand = player_start,
     shoe       = slice,
     up_card    = up,
-    strategy   = function(hand, upc, can_double_hand = TRUE, can_split_hand = FALSE, ...) {
+    strategy   = function(hand, upc, can_double = TRUE, ...) {
       # efektivno: globalni & lokalni (npr. po prvih dveh kartah še dovoli double)
-      eff_double <- can_double && can_double_hand
-      eff_split  <- can_split  && can_split_hand
+      eff_double <- isTRUE(can_double_global) && isTRUE(can_double)
+      eff_split  <- FALSE
       
       action <- basic_action_bs(
         player_vals = hand,
         dealer_up   = upc,
         can_double  = eff_double,
         can_split   = eff_split,
-        can_surrender  = can_surrender
+        can_surrender  = isTRUE(can_surrender_global),
+        bs_table = BS_TABLE_CURRENT
       )
       
       action
@@ -432,6 +437,11 @@ deal_hand_from_shoe_hilo <- function(shoe, running_count,
                                      can_split = TRUE,
                                      can_surrender = TRUE,
                                      verbose = FALSE) {
+  
+  can_double_global    <- can_double
+  can_split_global     <- can_split
+  can_surrender_global <- can_surrender
+  
   if (verbose) {
     cat("\n=== NEW HAND (Hi-Lo) ===\n")
     cat(sprintf("shoe pos=%d  cut=%d  total=%d  running_count=%d\n",
@@ -521,14 +531,14 @@ deal_hand_from_shoe_hilo <- function(shoe, running_count,
       start_hand = hand1_start,
       shoe       = slice_h1,
       up_card    = up,
-      strategy   = function(hand, upc, can_double_hand = TRUE, ...) {
-        eff_double <- can_double && can_double_hand
+      strategy   = function(hand, upc, can_double = TRUE, ...) {
+        eff_double <- isTRUE(can_double_global) && isTRUE(can_double)
         basic_action_bs(
           player_vals    = hand,
           dealer_up      = upc,
           can_double     = eff_double,
           can_split      = FALSE,         # brez re-splita
-          can_surrender  = can_surrender,
+          can_surrender  = isTRUE(can_surrender_global),
           bs_table       = BS_TABLE_CURRENT
         )
       },
@@ -548,14 +558,14 @@ deal_hand_from_shoe_hilo <- function(shoe, running_count,
       start_hand = hand2_start,
       shoe       = slice_h2,
       up_card    = up,
-      strategy   = function(hand, upc, can_double_hand = TRUE, ...) {
-        eff_double <- can_double && can_double_hand
+      strategy   = function(hand, upc, can_double= TRUE, ...) {
+        eff_double <- isTRUE(can_double_global) && isTRUE(can_double)
         basic_action_bs(
           player_vals    = hand,
           dealer_up      = upc,
           can_double     = eff_double,
           can_split      = FALSE,
-          can_surrender  = can_surrender,
+          can_surrender  = isTRUE(can_surrender_global),
           bs_table       = BS_TABLE_CURRENT
         )
       },
@@ -638,17 +648,18 @@ deal_hand_from_shoe_hilo <- function(shoe, running_count,
     start_hand = player_start,
     shoe       = slice,
     up_card    = up,
-    strategy   = function(hand, upc, can_double_hand = TRUE, can_split_hand = FALSE, ...) {
+    strategy   = function(hand, upc, can_double = TRUE, ...) {
       # efektivno: globalni & lokalni (npr. po prvih dveh kartah še dovoli double)
-      eff_double <- can_double && can_double_hand
-      eff_split  <- can_split  && can_split_hand
+      eff_double <- isTRUE(can_double_global) && isTRUE(can_double)
+      eff_split  <- FALSE
       
       action <- basic_action_bs(
         player_vals = hand,
         dealer_up   = upc,
         can_double  = eff_double,
         can_split   = eff_split,
-        can_surrender  = can_surrender
+        can_surrender = isTRUE(can_surrender_global),
+        bs_table = BS_TABLE_CURRENT
       )
       
       action
