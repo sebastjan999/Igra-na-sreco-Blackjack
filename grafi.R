@@ -29,7 +29,7 @@ ggplot(strategije_df, aes(x = strategija, y = HE_per_bet, fill = strategija)) +
   geom_col() +
   geom_hline(yintercept = 0, linetype = "dashed") +
   labs(
-    title = "House edge na unitarno stavo (HE) po strategijah",
+    title = "House edge (HE) na enoto stave po strategijah",
     x = "Strategija",
     y = "HE na enoto stave"
   ) +
@@ -76,13 +76,13 @@ ggplot(hilo_pen_df, aes(x = penetration, y = EV)) +
   )
 
 # HE vs penetration
-ggplot(hilo_pen_df, aes(x = penetration, y = HE)) +
+ggplot(hilo_pen_df, aes(x = penetration, y = HE_per_bet)) +
   geom_line() +
   geom_point(size = 2) +
   labs(
-    title = "Hi-Lo: House edge glede na penetracijo shoe-a",
+    title = "Hi-Lo: HE_per_bet glede na penetracijo shoe-a",
     x = "Penetracija",
-    y = "HE na enoto stave"
+    y = "HE (na enoto stave)"
   )
 
 # ROI vs penetration
@@ -101,72 +101,118 @@ ggplot(hilo_pen_df, aes(x = penetration, y = ROI)) +
 
 # a) DOUBLE ON/OFF
 double_df <- results_all %>%
-  filter(scenario %in% c("basic_double_ON", "basic_double_OFF")) %>%
-  mutate(label = if_else(can_double, "Double ON", "Double OFF"))
+  filter(scenario %in% c("basic_double_ON", "basic_double_OFF", "hilo_double_ON", "hilo_double_OFF")) %>%
+  mutate(label = if_else(can_double, "Double ON", "Double OFF"),
+         strategija = if_else(strategy == "basic", "Basic", "Hi-Lo")
+  )
 
-ggplot(double_df, aes(x = label, y = EV, fill = label)) +
-  geom_col() +
+ggplot(double_df, aes(x = label, y = HE_per_bet, fill = strategija)) +
+  geom_col(position = position_dodge(width = 0.7)) +
   geom_hline(yintercept = 0, linetype = "dashed") +
   labs(
-    title = "Vpliv pravila DOUBLE na EV (basic)",
-    x = "",
-    y = "EV na roko"
-  ) +
-  theme(legend.position = "none")
+    title = "Vpliv pravila DOUBLE na HE_per_bet (BASIC)",
+    x = "Double",
+    y = "HE (na enoto stave)"
+  ) 
 
 # b) SURRENDER ON/OFF
 surr_df <- results_all %>%
-  filter(scenario %in% c("basic_surrender_ON", "basic_surrender_OFF")) %>%
-  mutate(label = if_else(can_surrender, "Surrender ON", "Surrender OFF"))
+  filter(scenario %in% c("basic_surrender_ON", "basic_surrender_OFF", "hilo_surrender_ON", "hilo_surrender_OFF")) %>%
+  mutate(label = if_else(can_surrender, "Surrender ON", "Surrender OFF"),
+         strategija = if_else(strategy == "basic", "Basic", "Hi-Lo")
+  )
 
-ggplot(surr_df, aes(x = label, y = EV, fill = label)) +
-  geom_col() +
+ggplot(surr_df, aes(x = label, y = HE_per_bet, fill = strategija)) +
+  geom_col(position = position_dodge(width = 0.7)) +
   geom_hline(yintercept = 0, linetype = "dashed") +
   labs(
-    title = "Vpliv pravila SURRENDER na EV (basic)",
-    x = "",
-    y = "EV na roko"
-  ) +
-  theme(legend.position = "none")
+    title = "Vpliv pravila SURRENDER na HE_per_bet (BASIC)",
+    x = "Surrender",
+    y = "HE (na enoto stave)"
+  ) 
 
 # c) SPLIT ON/OFF
 split_df <- results_all %>%
-  filter(scenario %in% c("basic_split_ON", "basic_split_OFF")) %>%
-  mutate(label = if_else(can_split, "Split ON", "Split OFF"))
+  filter(scenario %in% c("basic_split_ON", "basic_split_OFF","hilo_split_ON", "hilo_split_OFF")) %>%
+  mutate(label = if_else(can_split, "Split ON", "Split OFF"),
+         strategija = if_else(strategy == "basic", "Basic", "Hi-Lo")
+  )
 
-ggplot(split_df, aes(x = label, y = EV, fill = label)) +
-  geom_col() +
+ggplot(split_df, aes(x = label, y = HE_per_bet, fill = strategija)) +
+  geom_col(position = position_dodge(width = 0.7)) +
   geom_hline(yintercept = 0, linetype = "dashed") +
   labs(
-    title = "Vpliv pravila SPLIT na EV (basic)",
+    title = "Vpliv pravila SPLIT na HE_per_bet (BASIC)",
+    x = "Split",
+    y = "HE (na enoto stave)"
+  ) 
+
+# ================================================================
+# DoD) Best vs wors case
+# ================================================================
+bw_df <- results_all %>%
+  filter(scenario %in% c("hilo_best", "hilo_worst")) %>%
+  mutate(case = if_else(scenario == "hilo_best", "Best case", "Worst case"))
+
+bw_df <- bw_df %>%
+  select(case, HE_per_bet, ROI) %>%
+  pivot_longer(cols = c(HE_per_bet, ROI),
+               names_to = "metric",
+               values_to = "value") %>%
+  mutate(metric = recode(metric,
+                         HE_per_bet = "HE (na enoto stave)",
+                         ROI = "ROI (donos na vložek)"))
+
+ggplot(bw_df, aes(x = case, y = value, fill = metric)) +
+  geom_col(position = position_dodge(width = 0.7)) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  labs(
+    title = "Hi–Lo: Best vs Worst case (HE in ROI)",
     x = "",
-    y = "EV na roko"
-  ) +
+    y = ""
+  )
+
+library(patchwork)
+
+bw_df2 <- results_all %>%
+  filter(scenario %in% c("hilo_best", "hilo_worst")) %>%
+  mutate(case = if_else(scenario == "hilo_best", "Best", "Worst"))
+
+p_bet <- ggplot(bw_df2, aes(x = case, y = avg_bet_per_hand, fill = case)) +
+  geom_col(width = 0.65) +
+  labs(title = "Povprečna stava (avg_bet)", x = NULL, y = "avg_bet") +
   theme(legend.position = "none")
+
+p_dd <- ggplot(bw_df2, aes(x = case, y = max_drawdown, fill = case)) +
+  geom_col(width = 0.65) +
+  labs(title = "Največji drawdown (MaxDD)", x = NULL, y = "max_drawdown") +
+  theme(legend.position = "none")
+
+p_bet / p_dd
 
 # ================================================================
 # 5) BASIC: IZPLAČILO ZA BLACKJACK (3:2 VS 6:5)
 # ================================================================
 
 bj_payout_df <- results_all %>%
-  filter(scenario %in% c("basic_BJ_3to2", "basic_BJ_6to5")) %>%
+  filter(scenario %in% c("basic_BJ_3to2", "basic_BJ_6to5", "hilo_BJ_3to2", "hilo_BJ_6to5")) %>%
   mutate(
     payout_label = case_when(
       abs(payout_bj - 1.5) < 1e-9 ~ "BJ 3:2",
       abs(payout_bj - 1.2) < 1e-9 ~ "BJ 6:5",
       TRUE ~ paste("BJ", payout_bj)
-    )
+    ), strategija = if_else(strategy == "basic", "Basic", "Hi-Lo"),
+    payout_label = factor(payout_label, levels = c("BJ 3:2", "BJ 6:5"))
   )
 
-ggplot(bj_payout_df, aes(x = payout_label, y = EV, fill = payout_label)) +
-  geom_col() +
+ggplot(bj_payout_df, aes(x = payout_label, y = HE_per_bet, fill = strategija)) +
+  geom_col(position = position_dodge(width = 0.7)) +
   geom_hline(yintercept = 0, linetype = "dashed") +
   labs(
-    title = "Vpliv izplačila za Blackjack na EV (basic)",
+    title = "Vpliv izplačila za Blackjack na HE_per_bet",
     x = "Izplačilo BJ",
-    y = "EV na roko"
-  ) +
-  theme(legend.position = "none")
+    y = "HE (na enoto stave)"
+  ) 
 
 # ================================================================
 # 6) HI-LO: EV GLEDE NA TRUE COUNT
@@ -175,7 +221,7 @@ ggplot(bj_payout_df, aes(x = payout_label, y = EV, fill = payout_label)) +
 set.seed(123)
 
 res_hilo_big <- simulate_with_shoe_hilo(
-  N            = 50000,
+  N            = 1e6,
   n_decks      = 6,
   penetration  = 0.75,
   hit_soft_17  = FALSE,  # S17

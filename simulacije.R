@@ -417,6 +417,40 @@ hilo_surrender = data.frame(
                      res_hilo_R_off$surrender_rate)
 )
 write.csv(hilo_surrender, "hilo_surrender.csv", row.names = FALSE)
+set.seed(20)
+
+#c) CAN SPLIT ON/OFF
+res_hilo_split_on <- simulate_with_shoe_hilo(
+  N            = N,
+  n_decks      = 6,
+  penetration  = 0.75,
+  hit_soft_17  = FALSE,
+  bet          = 1,
+  payout_bj    = 1.5,
+  can_double   = TRUE,
+  can_split    = TRUE,
+  can_surrender= TRUE
+)
+set.seed(20)
+res_hilo_split_off <- simulate_with_shoe_hilo(
+  N            = N,
+  n_decks      = 6,
+  penetration  = 0.75,
+  hit_soft_17  = FALSE,
+  bet          = 1,
+  payout_bj    = 1.5,
+  can_double   = TRUE,
+  can_split    = FALSE,
+  can_surrender= TRUE
+)
+
+hilo_split = data.frame(
+  split = c("ON", "OFF"),
+  EV    = c(res_hilo_split_on$EV, res_hilo_split_off$EV),
+  HE_per_bet  = c(res_hilo_split_on$HE_per_bet,
+                  res_hilo_split_off$HE_per_bet)
+)
+write.csv(hilo_split, "hilo_split.csv", row.names = FALSE)
 # -----------------------------------------------------------------------------
 #  DoD.) Hi-Lo: igra s parametri
 # -----------------------------------------------------------------------------
@@ -567,7 +601,7 @@ write.csv(df_hilo_pen, "df_hilo_pen.csv", row.names = FALSE)
 #  8.) Hi-Lo: EV po True Count (za graf)
 # -----------------------------------------------------------------------------
 
-set.seed(1)
+set.seed(123)
 res_hilo_big <- simulate_with_shoe_hilo(
   N            = N,
   n_decks      = 6,
@@ -823,6 +857,35 @@ rows[[k]] <- make_row(
   can_surrender = TRUE
 ); k <- k + 1
 
+# 4.) Blackjack payout 3:2 vs 6:5 (basic)
+rows[[k]] <- make_row(
+  name          = "hilo_BJ_3to2",
+  strategy      = "hilo",
+  res           = res_hilo_3to2,
+  N             = N,
+  n_decks       = 6,
+  penetration   = 0.75,
+  hit_soft_17   = FALSE,
+  payout_bj     = 1.5,
+  can_double    = TRUE,
+  can_split     = FALSE,
+  can_surrender = TRUE
+); k <- k + 1
+
+rows[[k]] <- make_row(
+  name          = "hilo_BJ_6to5",
+  strategy      = "hilo",
+  res           = res_hilo_6to5,
+  N             = N,
+  n_decks       = 6,
+  penetration   = 0.75,
+  hit_soft_17   = FALSE,
+  payout_bj     = 1.2,
+  can_double    = TRUE,
+  can_split     = FALSE,
+  can_surrender = TRUE
+); k <- k + 1
+
 for (j in seq_along(penetracije)) {
   pen <- penetracije[j]
   res_pen <- res_hilo_pen[[j]]
@@ -899,6 +962,33 @@ rows[[k]] <- make_row(
   can_surrender = FALSE
 ); k <- k + 1
 
+rows[[k]] <- make_row(
+  name          = "hilo_split_ON",
+  strategy      = "hilo",
+  res           = res_hilo_split_on,  
+  N             = N,
+  n_decks       = 6,
+  penetration   = 0.75,
+  hit_soft_17   = FALSE,
+  payout_bj     = 1.5,
+  can_double    = TRUE,
+  can_split     = TRUE,
+  can_surrender = TRUE
+); k <- k + 1
+
+rows[[k]] <- make_row(
+  name          = "hilo_split_OFF",
+  strategy      = "hilo",
+  res           = res_hilo_split_off, 
+  N             = N,
+  n_decks       = 6,
+  penetration   = 0.75,
+  hit_soft_17   = FALSE,
+  payout_bj     = 1.5,
+  can_double    = TRUE,
+  can_split     = FALSE,
+  can_surrender = TRUE
+); k <- k + 1
 rows[[k]] <- make_row(
   name          = "hilo_best",
   strategy      = "hilo",
