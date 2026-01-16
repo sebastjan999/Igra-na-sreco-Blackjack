@@ -314,8 +314,8 @@ ggsave(
 # 6) HI-LO: EV GLEDE NA TRUE COUNT
 # ================================================================
 
-tc_round <- round(res_hilo_big$true_count)
-EV_by_TC <- tapply(res_hilo_big$gains, tc_round, mean)
+tc_round <- round(ev_by_TC_df$true_count)
+EV_by_TC <- tapply(ev_by_TC_df$gains, tc_round, mean)
 N_by_TC  <- table(tc_round)
 
 ev_tc_df <- data.frame(

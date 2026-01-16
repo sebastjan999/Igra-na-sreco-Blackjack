@@ -1034,7 +1034,7 @@ subset(results_all, scenario %in% c("hilo_S17_rule","hilo_H17_rule"))
 
 set.seed(123)
 
-ev_by_TC_df = res_hilo_big <- simulate_with_shoe_hilo(
+ev_by_TC_df <- simulate_with_shoe_hilo(
   N            = 1e6,
   n_decks      = 6,
   penetration  = 0.75,
@@ -1047,6 +1047,7 @@ ev_by_TC_df = res_hilo_big <- simulate_with_shoe_hilo(
 )
 
 write.csv(ev_by_TC_df, "ev_by_TC_df.csv", row.names = FALSE)
+ev_by_TC_df
 
 
 
