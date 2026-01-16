@@ -336,7 +336,7 @@ EV_by_TC = ggplot(ev_tc_df, aes(x = TC, y = EV)) +
   )
 
 ggsave(
-  filename = "C:/Users/sebas/OneDrive/Namizje/MZR/EV_by_TC.png",
+  filename = "C:/Users/sebas/OneDrive/Namizje/MZR/Igra-na-sreco-Blackjack/grafi/EV_by_TC.png",
   plot = EV_by_TC,
   width = 8,
   height = 5,
@@ -365,7 +365,7 @@ hilo_bankroll_skozi_time = ggplot(bankroll_df, aes(x = hand, y = bankroll)) +
 hilo_bankroll_skozi_time
 
 ggsave(
-  filename = "C:/Users/sebas/OneDrive/Namizje/MZR/hilo_bankroll_skozi_time.png",
+  filename = "C:/Users/sebas/OneDrive/Namizje/MZR/Igra-na-sreco-Blackjack/grafi/hilo_bankroll_skozi_time.png",
   plot = hilo_bankroll_skozi_time,
   width = 8,
   height = 5,
@@ -386,9 +386,10 @@ hilo_porazdelitev_dobitkov = ggplot(gains_df, aes(x = gain)) +
 hilo_porazdelitev_dobitkov
 
 ggsave(
-  filename = "C:/Users/sebas/OneDrive/Namizje/MZR/hilo_porazdelitev_dobitkov.png",
+  filename = "C:/Users/sebas/OneDrive/Namizje/MZR/Igra-na-sreco-Blackjack/grafi/hilo_porazdelitev_dobitkov.png",
   plot = hilo_porazdelitev_dobitkov,
   width = 8,
   height = 5,
   dpi = 300
 )
+
