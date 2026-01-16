@@ -18,13 +18,13 @@ dealer_play <- function(shoe, up, hole, hit_soft_17 = FALSE) {
 
 # Igralčev potek roke (brez splitov, demo) ----------------------
 play_player <- function(shoe, up_card, strategy = basic_action) {
-  idx <- 1 #stevec naslednje karte v kupcku
+  idx <- 1 #števec naslednje karte v kupčku
   player <- c(shoe$val[idx], shoe$val[idx+1]); idx <- idx + 2 #damo mu 2 karti iz deka
   action_hist <- c() #zgodovina potez
   doubled <- FALSE
   
   repeat {
-    a <- strategy(player, up_card, can_double = (length(player) == 2)) #strategija kle je pac una basic demo zaenkrat
+    a <- strategy(player, up_card, can_double = (length(player) == 2)) #strategija
     action_hist <- c(action_hist, a)
     
     if (a == "stand") break
@@ -111,7 +111,7 @@ play_player_from_hand <- function(start_hand, shoe, up_card,
     surrendered = surrendered
   )
 }
-#bj payout nastavmo na 3:2 (kksni casinoji majo sicer slabs 6:5...kasneje za metrike pa HE bomo mal spreminjal)
+#bj payout nastavmo na 3:2 ('parameter za spreminjanje)
 simulate_hand <- function(n_decks = 6, hit_soft_17 = FALSE, bet = 1, payout_bj = 1.5) {
   shoe <- make_deck(n_decks)
   shoe <- shoe[sample(nrow(shoe)),]  # premešamo
@@ -156,7 +156,7 @@ simulate_hand <- function(n_decks = 6, hit_soft_17 = FALSE, bet = 1, payout_bj =
   res
 }
 
-#helper za Izračuna dobiček ene igralčeve roke proti delivcu(need for split)
+#helper za Izračuna dobiček ene igralčeve roke proti delivcu (potrebujemo za split)
 hand_gain_vs_dealer <- function(player_value, dealer_value, bet, doubled_flag) {
   # Če dealer sploh ni igral (NA), privzamemo 0 prispevek
   if (is.na(dealer_value)) return(0)
@@ -279,7 +279,7 @@ deal_hand_from_shoe <- function(shoe,
           player_vals    = hand,
           dealer_up      = upc,
           can_double     = eff_double,
-          can_split      = FALSE,          # NE dovolimo re-splita
+          can_split      = FALSE,          # NE dovolimo re-splita (sicer v original BJ je resplit ampak za ta projekt ne bomo)
           can_surrender  = isTRUE(can_surrender_global),
           bs_table       = BS_TABLE_CURRENT
         )
@@ -373,7 +373,7 @@ deal_hand_from_shoe <- function(shoe,
   
   #Opcija za surrender
   if (pl$surrendered) {
-    bet_mult <- if (isTRUE(pl$doubled)) 2 else 1  # surrender po double je v praksi malo tricky, lahko pa recimo prepoveš "R" po dvojitvi v tabeli
+    bet_mult <- if (isTRUE(pl$doubled)) 2 else 1  # surrender po double je v praksi malo tricky, prepovemo "R" po dvojitvi zaradi optimizacije projekta
     gain <- -0.5 * bet_mult * bet  # izgubiš pol stave
     return(list(
       gain         = gain,
@@ -408,7 +408,7 @@ deal_hand_from_shoe <- function(shoe,
   dl <- dealer_play(slice, up = up, hole = hole, hit_soft_17 = hit_soft_17)
   shoe <- advance_shoe(shoe, dl$next_idx - 1)
   
-  # Rezultat (tuki vse isto kukr pr 1 normalni roki)
+  # Rezultat (kot v normalni roki)
   pv <- pl$value; dv <- dl$value
   bet_mult <- if (isTRUE(pl$doubled)) 2 else 1
   gain <- if (dv > 21)  bet * bet_mult
@@ -442,7 +442,7 @@ deal_hand_from_shoe_hilo <- function(shoe, running_count,
   can_split_global     <- can_split
   can_surrender_global <- can_surrender
   
-  if (verbose) {
+  if (verbose) { #samo za preverjanje, naceloma nepomembno za same simulacije ker ponavadi nastavimo verbose=FALSE
     cat("\n=== NEW HAND (Hi-Lo) ===\n")
     cat(sprintf("shoe pos=%d  cut=%d  total=%d  running_count=%d\n",
                 shoe$pos, shoe$cut, shoe$total, running_count))

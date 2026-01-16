@@ -1,14 +1,15 @@
 setwd("C:/Users/sebas/OneDrive/Namizje/MZR/Igra-na-sreco-Blackjack")
 
 #source("simulacije.R")
-
+library(readr)
 library(ggplot2)
 library(dplyr)
 library(tidyr)
 
-
+setwd("C:/Users/sebas/OneDrive/Namizje/MZR/Igra-na-sreco-Blackjack")
 theme_set(theme_minimal(base_size = 13))
-
+results_all = read_csv("results_all.csv")
+ev_by_TC_df = read_csv("ev_by_TC_df.csv")
 # ================================================================
 # 1) PRIMERJAVA STRATEGIJ (DEMO / BASIC / HI-LO)
 # ================================================================
@@ -24,8 +25,8 @@ strategije_df <- results_all %>%
     )
   )
 
-# EV po strategijah
-ggplot(strategije_df, aes(x = strategija, y = HE_per_bet, fill = strategija)) +
+# EV/HE po strategijah
+strategije_graf = ggplot(strategije_df, aes(x = strategija, y = HE_per_bet, fill = strategija)) +
   geom_col() +
   geom_hline(yintercept = 0, linetype = "dashed") +
   labs(
@@ -35,6 +36,15 @@ ggplot(strategije_df, aes(x = strategija, y = HE_per_bet, fill = strategija)) +
   ) +
   theme(legend.position = "none")
 
+strategije_graf
+
+ggsave(
+  filename = "C:/Users/sebas/OneDrive/Namizje/MZR/Igra-na-sreco-Blackjack/grafi/strategije.png",
+  plot = strategije_graf,
+  width = 8,
+  height = 5,
+  dpi = 300
+)
 # ================================================================
 # 2) HOUSE EDGE: S17 VS H17 (BASIC & HI-LO)
 # ================================================================
@@ -47,7 +57,7 @@ he_rules_df <- results_all %>%
     strategija = if_else(strategy == "basic", "Basic", "Hi-Lo")
   )
 
-ggplot(he_rules_df, aes(x = pravilo, y = HE_per_bet, fill = strategija)) +
+s17_H17_basic_hilo_graf = ggplot(he_rules_df, aes(x = pravilo, y = HE_per_bet, fill = strategija)) +
   geom_col(position = position_dodge(width = 0.7)) +
   labs(
     title = "House edge pri različnih pravilih delivca",
@@ -56,6 +66,15 @@ ggplot(he_rules_df, aes(x = pravilo, y = HE_per_bet, fill = strategija)) +
     fill = "Strategija"
   )
 
+s17_H17_basic_hilo_graf
+
+ggsave(
+  filename = "C:/Users/sebas/OneDrive/Namizje/MZR/Igra-na-sreco-Blackjack/grafi/S17vsH17_pri_basic_in_hilo.png",
+  plot = s17_H17_basic_hilo_graf,
+  width = 8,
+  height = 5,
+  dpi = 300
+)
 # ================================================================
 # 3) HI-LO: VPLIV PENETRACIJE
 #    (scenariji: npr. 'hilo_pen_0.5', 'hilo_pen_0.75', ...)
@@ -66,7 +85,7 @@ hilo_pen_df <- results_all %>%
   arrange(penetration)
 
 # EV vs penetration
-ggplot(hilo_pen_df, aes(x = penetration, y = EV)) +
+hilo_penetration_vs_EV = ggplot(hilo_pen_df, aes(x = penetration, y = EV)) +
   geom_line() +
   geom_point(size = 2) +
   labs(
@@ -76,7 +95,7 @@ ggplot(hilo_pen_df, aes(x = penetration, y = EV)) +
   )
 
 # HE vs penetration
-ggplot(hilo_pen_df, aes(x = penetration, y = HE_per_bet)) +
+hilo_penetration_vs_HE = ggplot(hilo_pen_df, aes(x = penetration, y = HE_per_bet)) +
   geom_line() +
   geom_point(size = 2) +
   labs(
@@ -86,7 +105,7 @@ ggplot(hilo_pen_df, aes(x = penetration, y = HE_per_bet)) +
   )
 
 # ROI vs penetration
-ggplot(hilo_pen_df, aes(x = penetration, y = ROI)) +
+hilo_penetration_vs_ROI = ggplot(hilo_pen_df, aes(x = penetration, y = ROI)) +
   geom_line() +
   geom_point(size = 2) +
   labs(
@@ -94,7 +113,33 @@ ggplot(hilo_pen_df, aes(x = penetration, y = ROI)) +
     x = "Penetracija",
     y = "ROI"
   )
+hilo_penetration_vs_EV
+hilo_penetration_vs_HE
+hilo_penetration_vs_ROI
 
+ggsave(
+  filename = "C:/Users/sebas/OneDrive/Namizje/MZR/Igra-na-sreco-Blackjack/grafi/hilo_penetration_vs_EV.png",
+  plot = hilo_penetration_vs_EV,
+  width = 8,
+  height = 5,
+  dpi = 300
+)
+
+ggsave(
+  filename = "C:/Users/sebas/OneDrive/Namizje/MZR/Igra-na-sreco-Blackjack/grafi/hilo_penetration_vs_HE.png",
+  plot = hilo_penetration_vs_HE,
+  width = 8,
+  height = 5,
+  dpi = 300
+)
+
+ggsave(
+  filename = "C:/Users/sebas/OneDrive/Namizje/MZR/Igra-na-sreco-Blackjack/grafi/hilo_penetration_vs_ROI.png",
+  plot = hilo_penetration_vs_ROI,
+  width = 8,
+  height = 5,
+  dpi = 300
+)
 # ================================================================
 # 4) BASIC STRATEGIJA: PRAVILA IGRALECA (DOUBLE / SURRENDER / SPLIT)
 # ================================================================
@@ -106,7 +151,7 @@ double_df <- results_all %>%
          strategija = if_else(strategy == "basic", "Basic", "Hi-Lo")
   )
 
-ggplot(double_df, aes(x = label, y = HE_per_bet, fill = strategija)) +
+basic_double_ONvsOFF = ggplot(double_df, aes(x = label, y = HE_per_bet, fill = strategija)) +
   geom_col(position = position_dodge(width = 0.7)) +
   geom_hline(yintercept = 0, linetype = "dashed") +
   labs(
@@ -122,7 +167,7 @@ surr_df <- results_all %>%
          strategija = if_else(strategy == "basic", "Basic", "Hi-Lo")
   )
 
-ggplot(surr_df, aes(x = label, y = HE_per_bet, fill = strategija)) +
+basic_surrender_ONvsOFF = ggplot(surr_df, aes(x = label, y = HE_per_bet, fill = strategija)) +
   geom_col(position = position_dodge(width = 0.7)) +
   geom_hline(yintercept = 0, linetype = "dashed") +
   labs(
@@ -138,7 +183,7 @@ split_df <- results_all %>%
          strategija = if_else(strategy == "basic", "Basic", "Hi-Lo")
   )
 
-ggplot(split_df, aes(x = label, y = HE_per_bet, fill = strategija)) +
+basic_split_ONvsOFF = ggplot(split_df, aes(x = label, y = HE_per_bet, fill = strategija)) +
   geom_col(position = position_dodge(width = 0.7)) +
   geom_hline(yintercept = 0, linetype = "dashed") +
   labs(
@@ -147,6 +192,33 @@ ggplot(split_df, aes(x = label, y = HE_per_bet, fill = strategija)) +
     y = "HE (na enoto stave)"
   ) 
 
+basic_double_ONvsOFF
+basic_surrender_ONvsOFF
+basic_split_ONvsOFF
+
+ggsave(
+  filename = "C:/Users/sebas/OneDrive/Namizje/MZR/Igra-na-sreco-Blackjack/grafi/basic_double_ONvsOFF.png",
+  plot = basic_double_ONvsOFF,
+  width = 8,
+  height = 5,
+  dpi = 300
+)
+
+ggsave(
+  filename = "C:/Users/sebas/OneDrive/Namizje/MZR/Igra-na-sreco-Blackjack/grafi/basic_surrender_ONvsOFF.png",
+  plot = basic_surrender_ONvsOFF,
+  width = 8,
+  height = 5,
+  dpi = 300
+)
+
+ggsave(
+  filename = "C:/Users/sebas/OneDrive/Namizje/MZR/Igra-na-sreco-Blackjack/grafi/basic_split_ONvsOFF.png",
+  plot = basic_split_ONvsOFF,
+  width = 8,
+  height = 5,
+  dpi = 300
+)
 # ================================================================
 # DoD) Best vs wors case
 # ================================================================
@@ -163,7 +235,7 @@ bw_df <- bw_df %>%
                          HE_per_bet = "HE (na enoto stave)",
                          ROI = "ROI (donos na vložek)"))
 
-ggplot(bw_df, aes(x = case, y = value, fill = metric)) +
+BESTvsWORST = ggplot(bw_df, aes(x = case, y = value, fill = metric)) +
   geom_col(position = position_dodge(width = 0.7)) +
   geom_hline(yintercept = 0, linetype = "dashed") +
   labs(
@@ -171,6 +243,16 @@ ggplot(bw_df, aes(x = case, y = value, fill = metric)) +
     x = "",
     y = ""
   )
+
+BESTvsWORST
+
+ggsave(
+  filename = "C:/Users/sebas/OneDrive/Namizje/MZR/Igra-na-sreco-Blackjack/grafi/BESTvsWORST.png",
+  plot = BESTvsWORST,
+  width = 8,
+  height = 5,
+  dpi = 300
+)
 
 library(patchwork)
 
@@ -190,6 +272,13 @@ p_dd <- ggplot(bw_df2, aes(x = case, y = max_drawdown, fill = case)) +
 
 p_bet / p_dd
 
+ggsave(
+  filename = "C:/Users/sebas/OneDrive/Namizje/MZR/Igra-na-sreco-Blackjack/grafi/BESTvsWORST_avg_bet_in_MaxDD.png",
+  plot = p_bet / p_dd,
+  width = 8,
+  height = 5,
+  dpi = 300
+)
 # ================================================================
 # 5) BASIC: IZPLAČILO ZA BLACKJACK (3:2 VS 6:5)
 # ================================================================
@@ -205,7 +294,7 @@ bj_payout_df <- results_all %>%
     payout_label = factor(payout_label, levels = c("BJ 3:2", "BJ 6:5"))
   )
 
-ggplot(bj_payout_df, aes(x = payout_label, y = HE_per_bet, fill = strategija)) +
+Basic_BJ_payoff = ggplot(bj_payout_df, aes(x = payout_label, y = HE_per_bet, fill = strategija)) +
   geom_col(position = position_dodge(width = 0.7)) +
   geom_hline(yintercept = 0, linetype = "dashed") +
   labs(
@@ -214,23 +303,16 @@ ggplot(bj_payout_df, aes(x = payout_label, y = HE_per_bet, fill = strategija)) +
     y = "HE (na enoto stave)"
   ) 
 
+ggsave(
+  filename = "C:/Users/sebas/OneDrive/Namizje/MZR/Igra-na-sreco-Blackjack/grafi/Basic_BJ_payoff.png",
+  plot = Basic_BJ_payoff,
+  width = 8,
+  height = 5,
+  dpi = 300
+)
 # ================================================================
 # 6) HI-LO: EV GLEDE NA TRUE COUNT
 # ================================================================
-
-set.seed(123)
-
-res_hilo_big <- simulate_with_shoe_hilo(
-  N            = 1e6,
-  n_decks      = 6,
-  penetration  = 0.75,
-  hit_soft_17  = FALSE,  # S17
-  bet          = 1,
-  payout_bj    = 1.5,
-  can_double   = TRUE,
-  can_split    = FALSE,
-  can_surrender= TRUE
-)
 
 tc_round <- round(res_hilo_big$true_count)
 EV_by_TC <- tapply(res_hilo_big$gains, tc_round, mean)
@@ -242,7 +324,7 @@ ev_tc_df <- data.frame(
   N  = as.numeric(N_by_TC[names(EV_by_TC)])
 )
 
-ggplot(ev_tc_df, aes(x = TC, y = EV)) +
+EV_by_TC = ggplot(ev_tc_df, aes(x = TC, y = EV)) +
   geom_hline(yintercept = 0, linetype = "dashed") +
   geom_line() +
   geom_point(aes(size = N)) +
@@ -252,6 +334,14 @@ ggplot(ev_tc_df, aes(x = TC, y = EV)) +
     y = "EV na roko",
     size = "Št. opazovanj"
   )
+
+ggsave(
+  filename = "C:/Users/sebas/OneDrive/Namizje/MZR/EV_by_TC.png",
+  plot = EV_by_TC,
+  width = 8,
+  height = 5,
+  dpi = 300
+)
 
 # ================================================================
 # 7) HI-LO: BANKROLL KRIVULJA IN HISTOGRAM DOBITKOV
@@ -263,7 +353,7 @@ bankroll_df <- data.frame(
   bankroll = res_hilo_big$bankroll
 )
 
-ggplot(bankroll_df, aes(x = hand, y = bankroll)) +
+hilo_bankroll_skozi_time = ggplot(bankroll_df, aes(x = hand, y = bankroll)) +
   geom_line() +
   geom_hline(yintercept = 0, linetype = "dashed") +
   labs(
@@ -272,10 +362,20 @@ ggplot(bankroll_df, aes(x = hand, y = bankroll)) +
     y = "Bankroll"
   )
 
+hilo_bankroll_skozi_time
+
+ggsave(
+  filename = "C:/Users/sebas/OneDrive/Namizje/MZR/hilo_bankroll_skozi_time.png",
+  plot = hilo_bankroll_skozi_time,
+  width = 8,
+  height = 5,
+  dpi = 300
+)
+
 # Histogram dobitkov po igrah
 gains_df <- data.frame(gain = res_hilo_big$gains)
 
-ggplot(gains_df, aes(x = gain)) +
+hilo_porazdelitev_dobitkov = ggplot(gains_df, aes(x = gain)) +
   geom_histogram(bins = 50) +
   labs(
     title = "Porazdelitev dobitkov (Hi-Lo)",
@@ -283,3 +383,12 @@ ggplot(gains_df, aes(x = gain)) +
     y = "Frekvenca"
   )
 
+hilo_porazdelitev_dobitkov
+
+ggsave(
+  filename = "C:/Users/sebas/OneDrive/Namizje/MZR/hilo_porazdelitev_dobitkov.png",
+  plot = hilo_porazdelitev_dobitkov,
+  width = 8,
+  height = 5,
+  dpi = 300
+)

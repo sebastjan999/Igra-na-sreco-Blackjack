@@ -1032,9 +1032,21 @@ subset(results_all, grepl("pen_", scenario))
 subset(results_all, scenario %in% c("hilo_S17_rule","hilo_H17_rule"))
 
 
+set.seed(123)
 
+ev_by_TC_df = res_hilo_big <- simulate_with_shoe_hilo(
+  N            = 1e6,
+  n_decks      = 6,
+  penetration  = 0.75,
+  hit_soft_17  = FALSE,  # S17
+  bet          = 1,
+  payout_bj    = 1.5,
+  can_double   = TRUE,
+  can_split    = FALSE,
+  can_surrender= TRUE
+)
 
-
+write.csv(ev_by_TC_df, "ev_by_TC_df.csv", row.names = FALSE)
 
 
 

@@ -1,9 +1,9 @@
 init_shoe <- function(n_decks = 6, penetration = 0.75) {
-  stopifnot(penetration > 0, penetration < 1) #pac penetrartion more bit v (0,1)
+  stopifnot(penetration > 0, penetration < 1) #penetration in (0,1)
   df <- make_deck(n_decks) #nardimo n deckov
-  df <- df[sample(nrow(df)), ] #nakljucno premesamo dek
-  total <- nrow(df) #skupno st kart
-  cut   <- floor(total * penetration) #pri kaksnem delezu porabljenih kart (penetrartion npr 75%) zelimo reshuffle
+  df <- df[sample(nrow(df)), ] #nakljućno premesamo dek
+  total <- nrow(df) 
+  cut   <- floor(total * penetration) #kdaj reshuffle (odvisno od penetrationa)
   list(df = df, pos = 1L, total = total, cut = cut,
        n_decks = n_decks, penetration = penetration) #vrnemo seznam
 }
