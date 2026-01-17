@@ -313,6 +313,19 @@ ggsave(
 # ================================================================
 # 6) HI-LO: EV GLEDE NA TRUE COUNT
 # ================================================================
+#set.seed(123)
+
+#ev_by_TC_df <- simulate_with_shoe_hilo(
+#  N            = 1e6,
+#  n_decks      = 6,
+#  penetration  = 0.75,
+#  hit_soft_17  = FALSE,  # S17
+#  bet          = 1,
+#  payout_bj    = 1.5,
+#  can_double   = TRUE,
+#  can_split    = FALSE,
+#  can_surrender= TRUE
+#)
 
 tc_round <- round(ev_by_TC_df$true_count)
 EV_by_TC <- tapply(ev_by_TC_df$gains, tc_round, mean)
@@ -349,8 +362,8 @@ ggsave(
 
 # Bankroll skozi čas
 bankroll_df <- data.frame(
-  hand = seq_along(res_hilo_big$bankroll),
-  bankroll = res_hilo_big$bankroll
+  hand = seq_along(ev_by_TC_df$bankroll),
+  bankroll = ev_by_TC_df$bankroll
 )
 
 hilo_bankroll_skozi_time = ggplot(bankroll_df, aes(x = hand, y = bankroll)) +
@@ -373,10 +386,10 @@ ggsave(
 )
 
 # Histogram dobitkov po igrah
-gains_df <- data.frame(gain = res_hilo_big$gains)
+gains_df <- data.frame(gain = ev_by_TC_df$gains)
 
 hilo_porazdelitev_dobitkov = ggplot(gains_df, aes(x = gain)) +
-  geom_histogram(bins = 50) +
+  geom_histogram(bins = 35) +
   labs(
     title = "Porazdelitev dobitkov (Hi-Lo)",
     x = "Dobiček na roko",
