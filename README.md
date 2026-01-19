@@ -8,6 +8,7 @@ Ta projekt implementira **Monte Carlo simulacije Blackjacka** z uporabo:
 - realistično igro z *shoe*, penetracijo in mešanjem,
 - napredno verzijo z **Hi–Lo štetjem kart** in **bet spread**.
 
+Projekt uporablja Monte Carlo simulacije z realistično odvisnostjo med igrami znotraj iste seje (shoe, penetracija, card counting), pri čemer so posamezne simulirane seje med sabo neodvisne, kar zadošča za Monte Carlo ocenjevanje pričakovanih vrednosti in porazdelitev.
 Projekt omogoča analizo house edge, ROI, volatilnosti, bankroll poteka in učinkov uporabe strategij.
 Vsa ključna logika projekta se nahaja v mapi R/, kjer so shranjene funkcije in ostala pomembna koda. To kodo uporabljamo v naslednjih pomembnih R skriptah:
 
