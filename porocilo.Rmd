@@ -787,7 +787,7 @@ knitr::include_graphics(c(
   "grafi/hilo_penetration_vs_ROI.png"))
 ```
 
-# 5.6 Primerjava Best vs Worst caswe - za napredno strategijo
+# 5.6 Primerjava Best vs Worst case - za napredno strategijo
 
 ```{r fig_BestvsWorst, echo=FALSE, fig.show="hold", out.width="50%"}
 knitr::include_graphics(c(
