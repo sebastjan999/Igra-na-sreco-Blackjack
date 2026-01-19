@@ -103,7 +103,7 @@ simulate_with_shoe_hilo(
 ```
 
 Namig: za reproducibilnost vedno nastavi set.seed(...). Za večjo natančnost zvišaj N (npr. 1e5 ali 1e6). Vse ostale parametre spreminjaj po zelji :) 
-OPOZORILO: Za enkrat can_split se ni implementiran, zato neglede na to ali je TRUE ali FALSE vrača iste rezultate (bom popravilo, soon-ish)
+OPOZORILO: can_split ni polno implementiran, nedovoljujemo (RS) ReSplit in (DAS) DoubleAfterSplit.
 
 ### Parametri (povzetek)
 
