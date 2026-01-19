@@ -43,7 +43,7 @@ Mapa tests/ vsebuje kodo za test-driven development, kjer so implementirani test
 │    \
 │    \
 ├── tests/                  \
-│   ├── testthat            #   \
+│   ├── testthat.R          #   \
 │   ├── testthat/           #  \
 │    \
 │    \
