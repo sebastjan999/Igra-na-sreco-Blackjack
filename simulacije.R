@@ -5,7 +5,6 @@ source("R/02_shoe.R")
 source("R/03_strategy.R")
 source("R/04_play_hand.R")
 source("R/05_simulation.R")
-source("R/06_experiments.R")
 
 #=======================HELPER FUNK ZA SKUPNI DF PO SIMULACIJAH============================================
 make_row <- function(
@@ -245,7 +244,10 @@ basic_double = data.frame(
   HE_per_bet  = c(res_basic_double_on$HE_per_bet,
                   res_basic_double_off$HE_per_bet),
   avg_bet     = c(res_basic_double_on$avg_bet_per_hand,
-                  res_basic_double_off$avg_bet_per_hand)
+                  res_basic_double_off$avg_bet_per_hand),
+  double_rate = c(res_basic_double_on$double_rate,
+                  res_basic_double_off$double_rate)
+  
 )
 
 write.csv(basic_double, "basic_double.csv", row.names = FALSE)
@@ -302,9 +304,9 @@ basic_surrender = data.frame(
 )
 write.csv(basic_surrender, "basic_surrender.csv", row.names = FALSE)
 
-set.seed(20)
-
 #c) CAN SPLIT ON/OFF
+
+set.seed(20)
 res_basic_split_on <- simulate_with_shoe(
   N            = N,
   n_decks      = 6,
@@ -316,6 +318,7 @@ res_basic_split_on <- simulate_with_shoe(
   can_split    = TRUE,
   can_surrender= TRUE
 )
+
 set.seed(20)
 res_basic_split_off <- simulate_with_shoe(
   N            = N,
@@ -371,7 +374,8 @@ hilo_double = data.frame(
   EV              = c(res_hilo_double_on$EV, res_hilo_double_off$EV),
   HE_per_bet              = c(res_hilo_double_on$HE_per_bet, res_hilo_double_off$HE_per_bet),
   HE_per_hand     = c(res_hilo_double_on$HE_per_hand, res_hilo_double_off$HE_per_hand),
-  ROI             = c(res_hilo_double_on$ROI, res_hilo_double_off$ROI)
+  ROI             = c(res_hilo_double_on$ROI, res_hilo_double_off$ROI),
+  double_rate             = c(res_hilo_double_on$double_rate, res_hilo_double_off$double_rate)
 )
 write.csv(hilo_double, "hilo_double.csv", row.names = FALSE)
 #Čeprav je double kot posamezna poteza pozitivna v okviru osnovne strategije, kombinacija Hi-Lo stavnega razpona in osnovne strategije brez index prilagoditev povzroči poslabšanje house edge na enoto vložka.
@@ -455,20 +459,21 @@ write.csv(hilo_split, "hilo_split.csv", row.names = FALSE)
 #  DoD.) Hi-Lo: igra s parametri
 # -----------------------------------------------------------------------------
 
-set.seed(6667)
+set.seed(1)
 res_hilo_all_on <- simulate_with_shoe_hilo(
   N            = N,
   n_decks      = 2,
-  penetration  = 0.9,
+  penetration  = 0.90,
   hit_soft_17  = FALSE,
   bet          = 1,
   payout_bj    = 1.5,
   can_double   = FALSE,
   can_split    = FALSE,
-  can_surrender= FALSE
+  can_surrender= TRUE
 )
+res_hilo_all_on$EV
 
-set.seed(6667)
+set.seed(1)
 res_hilo_all_off <- simulate_with_shoe_hilo(
   N            = N,
   n_decks      = 6,
@@ -486,7 +491,8 @@ hilo_extreme = data.frame(
   EV           = c(res_hilo_all_on$EV, res_hilo_all_off$EV),
   HE_per_bet           = c(res_hilo_all_on$HE_per_bet, res_hilo_all_off$HE_per_bet),
   HE_per_hand  = c(res_hilo_all_on$HE_per_hand, res_hilo_all_off$HE_per_hand),
-  ROI          = c(res_hilo_all_on$ROI, res_hilo_all_off$ROI)
+  ROI          = c(res_hilo_all_on$ROI, res_hilo_all_off$ROI),
+  avg_bet_per_hand          = c(res_hilo_all_on$avg_bet_per_hand, res_hilo_all_off$avg_bet_per_hand)
 )
 write.csv(hilo_extreme, "hilo_extreme.csv", row.names = FALSE)
 # -----------------------------------------------------------------------------
@@ -603,7 +609,7 @@ write.csv(df_hilo_pen, "df_hilo_pen.csv", row.names = FALSE)
 
 set.seed(123)
 res_hilo_big <- simulate_with_shoe_hilo(
-  N            = N,
+  N            = 1e6,
   n_decks      = 6,
   penetration  = 0.75,
   hit_soft_17  = FALSE,

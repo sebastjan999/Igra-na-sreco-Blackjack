@@ -4,7 +4,8 @@ author: "Sebastjan Senk"
 date: '2025'
 output:
   html_document: default
-  pdf_document: 
+  word_document: default
+  pdf_document:
     fig_crop: false
 subtitle: 'Igre na srečo: Blackjack'
 ---
@@ -53,7 +54,7 @@ $$
 ## 2.2 Vrste strategij
 
 | Tip strategije                     | Opis                                                                           | Namen                   |
-|------------------------------------|--------------------------------------------------------------------------------|-------------------------|
+|------------------|-------------------------------------|------------------|
 | **Naključna (demo verzija)**       | Poteze brez logike.                                                            | Kontrolni primer.       |
 | **Osnovna (Basic)**                | Optimalna glede na pričakovani izid, brez štetja kart.                         | Standard v simulacijah. |
 | **Napredna/Hi-Lo (z Hi-Lo count)** | Uporabi dodatne informacije (npr. štetje kart) za prilagoditev potez in stave. | Poveča dolgoročni $EV$. |
@@ -388,7 +389,7 @@ Najprej primerjam tri strategije pri istih pravilih:
 -   **Hi–Lo (shoe + spread)**: štetje kart + prilagajanje stave (bet spread)
 
 | Strategija            | $EV_{\text{per hand}}$ | $HE_{\text{per hand}}$ | $HE_{\text{per bet}}$ |     $ROI$ | $\overline{\text{bet}}$ |
-|-----------------------|-----------------------:|-----------------------:|----------------------:|----------:|------------------------:|
+|------------|-----------:|-----------:|-----------:|-----------:|-----------:|
 | Demo / random         |              -0.037238 |               0.037238 |              0.037238 | -0.037238 |                   1.000 |
 | Basic (shoe)          |              -0.040783 |               0.040783 |              0.035375 | -0.035375 |                   1.153 |
 | Hi-Lo (shoe + spread) |              -0.055703 |               0.055703 |              0.025605 | -0.025605 |                   2.176 |
@@ -476,9 +477,10 @@ Najprej pogledamo vpliv pravila *double* pri osnovni strategiji.
 ```{r basic_double_table, echo=FALSE, message=FALSE, warning=FALSE}
 df_basic_double <- data.frame(
   double       = c("ON", "OFF"),
-  EV_per_hand  = c(-0.03595, -0.02535),
-  HE_per_bet   = c(0.03127991, 0.02535),
-  avg_bet      = c(1.1493, 1.0000)
+  EV_per_hand  = c(-0.037770, -0.023965),
+  HE_per_bet   = c(0.03276115, 0.02396500 ),
+  avg_bet      = c(1.15289     , 1.00000     ),
+  double_rate =  c(0.15289, 0.00000)
 )
 
 knitr::kable(
@@ -492,8 +494,8 @@ Na prvi pogled se zdi, da omogočeno podvajanje poslabša rezultat. House edge n
 
 Za boljše razumevanje poglejmo še ločeno pričakovani izid **na stavo** za roke, kjer je bil *double* dejansko uporabljen:
 
--   **EV na stavo (doubled roke)**: −0.0114\
--   **EV na stavo (brez doubled rok)**: −0.0383
+-   **EV na stavo (doubled roke)**: −0.0152\
+-   **EV na stavo (brez doubled rok)**: −0.0391
 
 To pomeni, da so *double roke same po sebi bistveno manj slabe* kot povprečna roka brez podvajanja.
 
@@ -508,9 +510,9 @@ Vendar pa omogočeno podvajanje **poveča povprečni vložek**, saj igralec v pr
 ```{r basic_surrender_table, echo=FALSE, message=FALSE, warning=FALSE}
 df_basic_surrender <- data.frame(
 surrender = c("ON", "OFF"),
-EV = c(-0.03595, -0.05400),
-HE_per_bet = c(0.03127991, 0.04714510),
-surrender_rate = c(0.0805, 0.0000)
+EV = c(-0.042530 , -0.042635 ),
+HE_per_bet = c(0.03691167        , 0.03703269        ),
+surrender_rate = c(0.07794, 0.00000)
 )
 
 knitr::kable(
@@ -522,7 +524,7 @@ caption = "Osnovna strategija: vpliv pravila surrender"
 
 Omogočen *surrender* jasno izboljša rezultat. Igralec se v približno 8 % primerov odloči za predajo in s tem zmanjša izgube v zelo neugodnih situacijah.
 
-Surrender je eno izmed pravil, ki imajo največji pozitiven vpliv na house edge.
+Surrender je eno izmed pravil, ki imajo pozitiven vpliv na house edge.
 
 ------------------------------------------------------------------------
 
@@ -531,8 +533,8 @@ Surrender je eno izmed pravil, ki imajo največji pozitiven vpliv na house edge.
 ```{r basic_split_table, echo=FALSE, message=FALSE, warning=FALSE}
 df_basic_split <- data.frame(
 split = c("ON", "OFF"),
-EV = c(-0.02580, -0.03595),
-HE_per_bet = c(0.02234540, 0.03127991)
+EV = c(-0.031755 , -0.042530 ),
+HE_per_bet = c(0.02745951, 0.03691167)
 )
 
 knitr::kable(
@@ -554,10 +556,11 @@ Pri Hi–Lo strategiji so opazni podobni vzorci kot pri osnovni strategiji.
 
 df_hilo_double <- data.frame(
 double = c("ON", "OFF"),
-EV = c(-0.04765, -0.02180),
-HE_per_bet = c(0.02423703, 0.01253594),
-HE_per_hand = c(0.04765, 0.02180),
-ROI = c(-0.02423703, -0.01253594)
+EV = c(-0.036305 , -0.029185 ),
+HE_per_bet = c(0.01647292    , 0.01548407    ),
+HE_per_hand = c(0.036305 , 0.029185 ),
+ROI = c(-0.01647292     , -0.01548407),
+double_rate = c(0.15289, 0.00000)
 )
 
 knitr::kable(
@@ -573,11 +576,11 @@ caption = "Hi–Lo strategija: vpliv pravila double"
 
 df_hilo_surrender <- data.frame(
 surrender = c("ON", "OFF"),
-EV = c(-0.04765, -0.06830),
-HE_per_bet = c(0.02423703, 0.03432506),
-HE_per_hand = c(0.04765, 0.06830),
-ROI = c(-0.02423703, -0.03432506),
-surrender_rate = c(0.0805, 0.0000)
+EV = c(-0.056645 , -0.064545 ),
+HE_per_bet = c(0.02625176    , 0.02996810    ),
+HE_per_hand = c(0.056645 , 0.064545 ),
+ROI = c(-0.02625176        , -0.02996810        ),
+surrender_rate = c(0.07794, 0.00000)
 )
 
 knitr::kable(
@@ -607,10 +610,11 @@ V obeh primerih uporabljamo Hi–Lo štetje kart, razlika pa je tako v *pravilih
 ```{r hilo_extreme_table, echo=FALSE, message=FALSE, warning=FALSE}
 df_hilo_extreme <- data.frame(
   pravila      = c("Best-case", "Worst-case"),
-  EV           = c( 0.01735,  -0.06090),
-  HE_per_bet   = c(-0.006275091,  0.041572804),
-  HE_per_hand  = c(-0.01735,   0.06090),
-  ROI          = c( 0.006275091, -0.041572804)
+  EV           = c( 0.014560 ,  -0.051346  ),
+  HE_per_bet   = c(-0.005421588   ,  0.033577253    ),
+  HE_per_hand  = c(-0.014560  ,   0.051346 ),
+  ROI          = c( 0.005421588, -0.033577253),
+  avg_bet      = c(2.68556, 1.52919)  
 )
 
 knitr::kable(
@@ -656,14 +660,12 @@ V tej sekciji analiziramo vpliv izplačila za **naravni blackjack**. Edina razli
 
 Ker se razlika pokaže izključno ob pojavu blackjacka, je ta primer predvsem intuitiven, a hkrati zelo pomemben v praksi.
 
-### 4.4.1 Osnovna strategija (Basic)
-
 ```{r basic_payout_table, echo=FALSE, message=FALSE, warning=FALSE}
 df_basic_payout <- data.frame(
   payout_bj  = c("3:2", "6:5"),
-  EV         = c(-0.03415, -0.04768),
-  HE_per_bet = c(0.02961839, 0.04135299),
-  bj_rate    = c(0.0474, 0.0474)
+  EV         = c(-0.035525 , -0.049103 ),
+  HE_per_bet = c(0.03081788 , 0.04259677 ),
+  bj_rate    = c(0.04725, 0.04725)
 )
 
 knitr::kable(
@@ -676,10 +678,10 @@ knitr::kable(
 ```{r hilo_payout_table, echo=FALSE, message=FALSE, warning=FALSE}
 df_hilo_payout <- data.frame(
 payout_bj = c("3:2", "6:5"),
-EV = c(-0.02445, -0.05433),
-HE_per_bet = c(0.01110001, 0.02466518),
-bj_rate = c(0.0474, 0.0474),
-avg_bet = c(2.2027, 2.2027)
+EV = c(-0.046140 , -0.074118 ),
+HE_per_bet = c(0.02119557 , 0.03404797 ),
+bj_rate = c(0.04725 , 0.04725 ),
+avg_bet = c(2.17687, 2.17687)
 )
 
 knitr::kable(
@@ -708,11 +710,11 @@ V vseh simulacijah so uporabljeni: - ista Hi–Lo strategija, - enak bet spread,
 ```{r hilo_penetration_table, echo=FALSE, message=FALSE, warning=FALSE}
 df_hilo_penetration <- data.frame(
   penetration = c(0.50, 0.75, 0.90),
-  EV          = c(-0.0420, -0.0552, -0.0338),
-  HE_per_bet  = c(0.02386499, 0.02416178, 0.01423997),
-  HE_per_hand = c(0.0420, 0.0552, 0.0338),
-  ROI         = c(-0.02386499, -0.02416178, -0.01423997),
-  avg_bet     = c(1.7599, 2.2846, 2.3736)
+  EV          = c(-0.058575 , -0.065315 , -0.026820 ),
+  HE_per_bet  = c(0.03334871     , 0.02984614    , 0.01114829    ),
+  HE_per_hand = c(0.058575 , 0.065315 , 0.026820 ),
+  ROI         = c(-0.03334871 , -0.02984614 , -0.01114829 ),
+  avg_bet     = c(1.75644, 2.18839, 2.40575)
 )
 
 knitr::kable(
