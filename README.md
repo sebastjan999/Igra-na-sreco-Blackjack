@@ -35,6 +35,7 @@ Mapa tests/ vsebuje kodo za test-driven development, kjer so implementirani test
 │     \
 ├── basic_strategy.csv      # tabela osnovne strategije za S17  \
 ├── basic_strategy_H17.csv  # tabela osnovne strategije za H17  \
+├── results_all.csv         # tabela  z vsemi rezultati izvajanih MC simulacij  \
 │  \
 ├── main.R                  # enotna vstopna točka (source vseh skript)  \
 ├── simulacije.R            # izvajanje simulacij za zbiranje metrik za analizo in risanje grafov \
