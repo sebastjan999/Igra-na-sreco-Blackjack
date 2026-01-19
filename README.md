@@ -53,9 +53,9 @@ Mapa tests/ vsebuje kodo za test-driven development, kjer so implementirani test
 
 ##  Kako pognati kodo (bom cim odpravm se eno pomankljivost v kodi XD)
 
-1️. Kloniraj repozitorij (najlazji kr fork) \
+1️. Kloniraj repozitorij  \
 2. Odpri main.R v RStudiu \
-3. V prvi vrstici te scripte nastavi svoj working directory (na mapo, kjer je celoten fork-an repozitorij) \
+3. V prvi vrstici te scripte nastavi svoj working directory (na mapo, kjer je celoten kloniran repozitorij) \
 4. Zaženi enega od 3 pripravljenih primerov (na vrhu main.R). \
 ### i) Demo verzija (hitro preverjanje)
 
